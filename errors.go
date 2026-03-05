@@ -16,6 +16,9 @@ var (
 	// ErrBatchTooLarge indicates request exceeds batch constraints.
 	ErrBatchTooLarge = errors.New("batch too large")
 
+	// ErrTextTooLong indicates single text item exceeds configured limit.
+	ErrTextTooLong = errors.New("text too long")
+
 	// ErrProviderTemporary indicates retryable upstream provider failure.
 	ErrProviderTemporary = errors.New("temporary provider failure")
 

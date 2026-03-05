@@ -94,17 +94,17 @@ func New(options Options) *Translator {
 
 // Capabilities reports provider capabilities.
 func (translator *Translator) Capabilities() transitext.Capabilities {
-	return transitext.Capabilities{
-		Provider:             "openai",
-		Stability:            transitext.ProviderStable,
-		OfficialAPI:          false,
-		SupportsGlossary:     false,
-		SupportsInstructions: true,
-		SupportsBatch:        true,
-		SupportsHTML:         false,
-		MaxBatchItems:        translator.options.BatchMaxItems,
-		MaxBatchChars:        translator.options.BatchMaxChars,
-	}
+	return transitext.NewCapabilities(
+		"openai",
+		transitext.ProviderStable,
+		false,
+		transitext.CapabilitiesOptions{
+			SupportsInstructions: true,
+			SupportsBatch:        true,
+			MaxBatchItems:        translator.options.BatchMaxItems,
+			MaxBatchChars:        translator.options.BatchMaxChars,
+		},
+	)
 }
 
 // Translate translates request with chat completion API.
@@ -112,9 +112,6 @@ func (translator *Translator) Translate(
 	ctx context.Context,
 	request transitext.Request,
 ) (transitext.Result, error) {
-	if err := transitext.ValidateRequest(request); err != nil {
-		return transitext.Result{}, err
-	}
 	if strings.TrimSpace(translator.options.AuthToken) == "" {
 		return transitext.Result{}, fmt.Errorf(
 			"openai auth token is required: %w",
@@ -122,26 +119,14 @@ func (translator *Translator) Translate(
 		)
 	}
 
-	batchOptions := request.Batch
-	if batchOptions.MaxItems <= 0 && translator.options.BatchMaxItems > 0 {
-		batchOptions.MaxItems = translator.options.BatchMaxItems
-	}
-	if batchOptions.MaxChars <= 0 && translator.options.BatchMaxChars > 0 {
-		batchOptions.MaxChars = translator.options.BatchMaxChars
-	}
-	batches, err := transitext.SplitRequest(request, batchOptions)
+	items, err := transitext.TranslateBatches(
+		ctx,
+		request,
+		translator.Capabilities(),
+		translator.translateBatch,
+	)
 	if err != nil {
 		return transitext.Result{}, err
-	}
-
-	items := make([]transitext.TranslatedItem, 0, len(request.Items))
-	for _, batch := range batches {
-		translated, err := translator.translateBatch(ctx, batch)
-		if err != nil {
-			return transitext.Result{}, err
-		}
-
-		items = append(items, translated...)
 	}
 
 	return transitext.Result{

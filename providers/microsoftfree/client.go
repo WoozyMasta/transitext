@@ -31,6 +31,12 @@ const (
 
 	// defaultUserAgent is browser-like UA for edge endpoint calls.
 	defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+
+	// defaultMaxItems is default request item limit per batch.
+	defaultMaxItems = 20
+
+	// defaultMaxChars is default request text-char limit per batch.
+	defaultMaxChars = 4000
 )
 
 // Options controls microsoftfree translator behavior.
@@ -111,12 +117,12 @@ func New(options Options) *Translator {
 
 	maxItems := options.MaxItems
 	if maxItems <= 0 {
-		maxItems = 20
+		maxItems = defaultMaxItems
 	}
 
 	maxChars := options.MaxChars
 	if maxChars <= 0 {
-		maxChars = 4000
+		maxChars = defaultMaxChars
 	}
 
 	return &Translator{
@@ -130,17 +136,16 @@ func New(options Options) *Translator {
 
 // Capabilities reports provider capabilities.
 func (translator *Translator) Capabilities() transitext.Capabilities {
-	return transitext.Capabilities{
-		Provider:             "microsoftfree",
-		Stability:            transitext.ProviderUnstable,
-		OfficialAPI:          false,
-		SupportsGlossary:     false,
-		SupportsInstructions: false,
-		SupportsBatch:        true,
-		SupportsHTML:         false,
-		MaxBatchItems:        translator.maxItems,
-		MaxBatchChars:        translator.maxChars,
-	}
+	return transitext.NewCapabilities(
+		"microsoftfree",
+		transitext.ProviderUnstable,
+		false,
+		transitext.CapabilitiesOptions{
+			SupportsBatch: true,
+			MaxBatchItems: translator.maxItems,
+			MaxBatchChars: translator.maxChars,
+		},
+	)
 }
 
 // Translate translates request via edge translate endpoint.
@@ -148,39 +153,24 @@ func (translator *Translator) Translate(
 	ctx context.Context,
 	request transitext.Request,
 ) (transitext.Result, error) {
-	if err := transitext.ValidateRequest(request); err != nil {
-		return transitext.Result{}, err
-	}
-
-	batchOptions := request.Batch
-	if batchOptions.MaxItems <= 0 {
-		batchOptions.MaxItems = translator.maxItems
-	}
-	if batchOptions.MaxChars <= 0 {
-		batchOptions.MaxChars = translator.maxChars
-	}
-	if batchOptions.OnOverflow == "" {
-		batchOptions.OnOverflow = transitext.OverflowSplit
-	}
-
-	batches, err := transitext.SplitRequest(request, batchOptions)
-	if err != nil {
-		return transitext.Result{}, err
-	}
-
 	token, err := translator.fetchToken(ctx)
 	if err != nil {
 		return transitext.Result{}, err
 	}
 
-	items := make([]transitext.TranslatedItem, 0, len(request.Items))
-	for _, batch := range batches {
-		batchItems, err := translator.translateBatch(ctx, token, batch)
-		if err != nil {
-			return transitext.Result{}, err
-		}
-
-		items = append(items, batchItems...)
+	items, err := transitext.TranslateBatches(
+		ctx,
+		request,
+		translator.Capabilities(),
+		func(batchCtx context.Context, batch transitext.Request) (
+			[]transitext.TranslatedItem,
+			error,
+		) {
+			return translator.translateBatch(batchCtx, token, batch)
+		},
+	)
+	if err != nil {
+		return transitext.Result{}, err
 	}
 
 	return transitext.Result{

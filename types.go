@@ -96,6 +96,9 @@ type BatchOptions struct {
 	// MaxChars limits text characters per request batch.
 	MaxChars int `json:"max_chars,omitempty" yaml:"max_chars,omitempty"`
 
+	// MaxTextChars limits one text item length when configured.
+	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty"`
+
 	// Parallel limits concurrent batch calls (wrapper-level concern).
 	Parallel int `json:"parallel,omitempty" yaml:"parallel,omitempty"`
 }
@@ -185,4 +188,7 @@ type Capabilities struct {
 
 	// MaxBatchChars reports hard provider batch character limit if known.
 	MaxBatchChars int `json:"max_batch_chars,omitempty" yaml:"max_batch_chars,omitempty"`
+
+	// MaxTextChars reports hard single text limit if known.
+	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty"`
 }

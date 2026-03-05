@@ -55,6 +55,26 @@ func (builder *Builder) Context(options ContextOptions) *Builder {
 	return builder
 }
 
+// Partial wraps current pipeline with PartialTranslator.
+func (builder *Builder) Partial(options PartialOptions) *Builder {
+	if builder == nil || builder.translator == nil {
+		return builder
+	}
+
+	builder.translator = NewPartialTranslator(builder.translator, options)
+	return builder
+}
+
+// LongText wraps current pipeline with LongTextTranslator.
+func (builder *Builder) LongText(options LongTextOptions) *Builder {
+	if builder == nil || builder.translator == nil {
+		return builder
+	}
+
+	builder.translator = NewLongTextTranslator(builder.translator, options)
+	return builder
+}
+
 // Fallback wraps current pipeline as first provider with fallbacks.
 func (builder *Builder) Fallback(translators ...Translator) *Builder {
 	if builder == nil || builder.translator == nil {

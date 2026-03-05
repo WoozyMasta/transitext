@@ -72,6 +72,26 @@ options:
       dl_session: "..."
 ```
 
+## Partial Results and Item Retry
+
+If you need to stop wasting API budget on full-batch retries, wrap provider
+with `PartialTranslator`. It translates items one-by-one, retries one failed
+item (`item_retries`) instead of replaying the whole batch, and keeps
+per-item errors in `result.items[i].error`.
+
+Default behavior is strict:
+
+* stop immediately on temporary/system errors;
+* return already translated items plus error for failed and not-processed rows.
+
+```go
+pipeline := transitext.Wrap(baseTranslator).
+    Partial(transitext.PartialOptions{
+        ItemRetries: 1,
+    }).
+    Build()
+```
+
 ## Context Passing
 
 > [!NOTE]  

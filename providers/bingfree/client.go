@@ -40,6 +40,12 @@ const (
 	// defaultTimeout is provider HTTP timeout.
 	defaultTimeout = 20 * time.Second
 
+	// defaultMaxItems is default request item limit per batch.
+	defaultMaxItems = 10
+
+	// defaultMaxChars is default request text-char limit per batch.
+	defaultMaxChars = 1000
+
 	// defaultMaxTextChars is per-item text length bound.
 	defaultMaxTextChars = 1000
 )
@@ -139,11 +145,11 @@ func New(options Options) *Translator {
 
 	maxItems := options.MaxItems
 	if maxItems <= 0 {
-		maxItems = 10
+		maxItems = defaultMaxItems
 	}
 	maxChars := options.MaxChars
 	if maxChars <= 0 {
-		maxChars = 2000
+		maxChars = defaultMaxChars
 	}
 	maxTextChars := options.MaxTextChars
 	if maxTextChars <= 0 {
@@ -161,17 +167,17 @@ func New(options Options) *Translator {
 
 // Capabilities reports provider capabilities.
 func (translator *Translator) Capabilities() transitext.Capabilities {
-	return transitext.Capabilities{
-		Provider:             "bingfree",
-		Stability:            transitext.ProviderUnstable,
-		OfficialAPI:          false,
-		SupportsGlossary:     false,
-		SupportsInstructions: false,
-		SupportsBatch:        true,
-		SupportsHTML:         false,
-		MaxBatchItems:        translator.maxItems,
-		MaxBatchChars:        translator.maxChars,
-	}
+	return transitext.NewCapabilities(
+		"bingfree",
+		transitext.ProviderUnstable,
+		false,
+		transitext.CapabilitiesOptions{
+			SupportsBatch: true,
+			MaxBatchItems: translator.maxItems,
+			MaxBatchChars: translator.maxChars,
+			MaxTextChars:  translator.maxTextChars,
+		},
+	)
 }
 
 // Translate translates request using unofficial Bing endpoint.
@@ -179,44 +185,14 @@ func (translator *Translator) Translate(
 	ctx context.Context,
 	request transitext.Request,
 ) (transitext.Result, error) {
-	if err := transitext.ValidateRequest(request); err != nil {
-		return transitext.Result{}, err
-	}
-
-	for index, item := range request.Items {
-		if len(item.Text) > translator.maxTextChars {
-			return transitext.Result{}, fmt.Errorf(
-				"items[%d] exceeds max_text_chars=%d: %w",
-				index,
-				translator.maxTextChars,
-				transitext.ErrBatchTooLarge,
-			)
-		}
-	}
-
-	batchOptions := request.Batch
-	if batchOptions.MaxItems <= 0 {
-		batchOptions.MaxItems = translator.maxItems
-	}
-	if batchOptions.MaxChars <= 0 {
-		batchOptions.MaxChars = translator.maxChars
-	}
-	if batchOptions.OnOverflow == "" {
-		batchOptions.OnOverflow = transitext.OverflowSplit
-	}
-	batches, err := transitext.SplitRequest(request, batchOptions)
+	items, err := transitext.TranslateBatches(
+		ctx,
+		request,
+		translator.Capabilities(),
+		translator.translateBatch,
+	)
 	if err != nil {
 		return transitext.Result{}, err
-	}
-
-	items := make([]transitext.TranslatedItem, 0, len(request.Items))
-	for _, batch := range batches {
-		batchItems, err := translator.translateBatch(ctx, batch)
-		if err != nil {
-			return transitext.Result{}, err
-		}
-
-		items = append(items, batchItems...)
 	}
 
 	return transitext.Result{

@@ -39,7 +39,7 @@ const (
 	defaultMaxItems = 20
 
 	// defaultMaxChars is default request text-char limit per batch.
-	defaultMaxChars = 4000
+	defaultMaxChars = 5000
 
 	// defaultMaxTextChars is default single text-char limit.
 	defaultMaxTextChars = 5000
@@ -279,17 +279,17 @@ func New(options Options) *Translator {
 
 // Capabilities reports provider capabilities.
 func (translator *Translator) Capabilities() transitext.Capabilities {
-	return transitext.Capabilities{
-		Provider:             "deeplfree",
-		Stability:            transitext.ProviderUnstable,
-		OfficialAPI:          false,
-		SupportsGlossary:     false,
-		SupportsInstructions: false,
-		SupportsBatch:        true,
-		SupportsHTML:         false,
-		MaxBatchItems:        translator.maxItems,
-		MaxBatchChars:        translator.maxChars,
-	}
+	return transitext.NewCapabilities(
+		"deeplfree",
+		transitext.ProviderUnstable,
+		false,
+		transitext.CapabilitiesOptions{
+			SupportsBatch: true,
+			MaxBatchItems: translator.maxItems,
+			MaxBatchChars: translator.maxChars,
+			MaxTextChars:  translator.maxTextChars,
+		},
+	)
 }
 
 // Translate translates input items with unofficial DeepL web endpoint.
@@ -297,45 +297,14 @@ func (translator *Translator) Translate(
 	ctx context.Context,
 	request transitext.Request,
 ) (transitext.Result, error) {
-	if err := transitext.ValidateRequest(request); err != nil {
-		return transitext.Result{}, err
-	}
-
-	for index, item := range request.Items {
-		if len(item.Text) > translator.maxTextChars {
-			return transitext.Result{}, fmt.Errorf(
-				"items[%d] exceeds max_text_chars=%d: %w",
-				index,
-				translator.maxTextChars,
-				transitext.ErrBatchTooLarge,
-			)
-		}
-	}
-
-	batchOptions := request.Batch
-	if batchOptions.MaxItems <= 0 {
-		batchOptions.MaxItems = translator.maxItems
-	}
-	if batchOptions.MaxChars <= 0 {
-		batchOptions.MaxChars = translator.maxChars
-	}
-	if batchOptions.OnOverflow == "" {
-		batchOptions.OnOverflow = transitext.OverflowSplit
-	}
-
-	batches, err := transitext.SplitRequest(request, batchOptions)
+	out, err := transitext.TranslateBatches(
+		ctx,
+		request,
+		translator.Capabilities(),
+		translator.translateBatch,
+	)
 	if err != nil {
 		return transitext.Result{}, err
-	}
-
-	out := make([]transitext.TranslatedItem, 0, len(request.Items))
-	for _, batch := range batches {
-		items, err := translator.translateBatch(ctx, batch)
-		if err != nil {
-			return transitext.Result{}, err
-		}
-
-		out = append(out, items...)
 	}
 
 	return transitext.Result{

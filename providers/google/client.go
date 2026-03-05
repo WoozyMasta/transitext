@@ -25,6 +25,9 @@ const (
 
 	// defaultTimeout is provider HTTP timeout.
 	defaultTimeout = 20 * time.Second
+
+	// defaultBatchMaxChars is conservative official sync-request char limit.
+	defaultBatchMaxChars = 30000
 )
 
 // Options controls Google provider behavior.
@@ -63,22 +66,26 @@ type Translator struct {
 
 // New creates Google provider.
 func New(options Options) *Translator {
+	if options.BatchMaxChars <= 0 {
+		options.BatchMaxChars = defaultBatchMaxChars
+	}
+
 	return &Translator{options: options}
 }
 
 // Capabilities reports provider capabilities.
 func (translator *Translator) Capabilities() transitext.Capabilities {
-	return transitext.Capabilities{
-		Provider:             "google",
-		Stability:            transitext.ProviderStable,
-		OfficialAPI:          true,
-		SupportsGlossary:     false,
-		SupportsInstructions: false,
-		SupportsBatch:        true,
-		SupportsHTML:         true,
-		MaxBatchItems:        translator.options.BatchMaxItems,
-		MaxBatchChars:        translator.options.BatchMaxChars,
-	}
+	return transitext.NewCapabilities(
+		"google",
+		transitext.ProviderStable,
+		true,
+		transitext.CapabilitiesOptions{
+			SupportsBatch: true,
+			SupportsHTML:  true,
+			MaxBatchItems: translator.options.BatchMaxItems,
+			MaxBatchChars: translator.options.BatchMaxChars,
+		},
+	)
 }
 
 // Translate translates request using official Google API.
@@ -86,9 +93,6 @@ func (translator *Translator) Translate(
 	ctx context.Context,
 	request transitext.Request,
 ) (transitext.Result, error) {
-	if err := transitext.ValidateRequest(request); err != nil {
-		return transitext.Result{}, err
-	}
 	if strings.TrimSpace(translator.options.Key) == "" {
 		return transitext.Result{}, fmt.Errorf(
 			"google api key is required: %w",
@@ -96,26 +100,14 @@ func (translator *Translator) Translate(
 		)
 	}
 
-	batchOptions := request.Batch
-	if batchOptions.MaxItems <= 0 && translator.options.BatchMaxItems > 0 {
-		batchOptions.MaxItems = translator.options.BatchMaxItems
-	}
-	if batchOptions.MaxChars <= 0 && translator.options.BatchMaxChars > 0 {
-		batchOptions.MaxChars = translator.options.BatchMaxChars
-	}
-	batches, err := transitext.SplitRequest(request, batchOptions)
+	items, err := transitext.TranslateBatches(
+		ctx,
+		request,
+		translator.Capabilities(),
+		translator.translateBatch,
+	)
 	if err != nil {
 		return transitext.Result{}, err
-	}
-
-	items := make([]transitext.TranslatedItem, 0, len(request.Items))
-	for _, batch := range batches {
-		batchItems, err := translator.translateBatch(ctx, batch)
-		if err != nil {
-			return transitext.Result{}, err
-		}
-
-		items = append(items, batchItems...)
 	}
 
 	return transitext.Result{

@@ -5,6 +5,7 @@
 package transitext
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -34,6 +35,15 @@ func ValidateRequest(request Request) error {
 				ErrInvalidRequest,
 			)
 		}
+
+		if request.Batch.MaxTextChars > 0 && len(item.Text) > request.Batch.MaxTextChars {
+			return fmt.Errorf(
+				"items[%d] exceeds max_text_chars %d: %w",
+				index,
+				request.Batch.MaxTextChars,
+				ErrTextTooLong,
+			)
+		}
 	}
 
 	return nil
@@ -54,6 +64,24 @@ func NormalizeBatchOptions(options BatchOptions) BatchOptions {
 	return options
 }
 
+// ResolveBatchOptions merges request batch options with provider capabilities.
+func ResolveBatchOptions(
+	options BatchOptions,
+	capabilities Capabilities,
+) BatchOptions {
+	if options.MaxItems <= 0 && capabilities.MaxBatchItems > 0 {
+		options.MaxItems = capabilities.MaxBatchItems
+	}
+	if options.MaxChars <= 0 && capabilities.MaxBatchChars > 0 {
+		options.MaxChars = capabilities.MaxBatchChars
+	}
+	if options.MaxTextChars <= 0 && capabilities.MaxTextChars > 0 {
+		options.MaxTextChars = capabilities.MaxTextChars
+	}
+
+	return NormalizeBatchOptions(options)
+}
+
 // SplitRequest splits request into batches according to options.
 // Returned batches reuse input item storage and should be treated as immutable.
 func SplitRequest(request Request, options BatchOptions) ([]Request, error) {
@@ -64,6 +92,15 @@ func SplitRequest(request Request, options BatchOptions) ([]Request, error) {
 	currentChars := 0
 
 	for index, item := range request.Items {
+		if options.MaxTextChars > 0 && len(item.Text) > options.MaxTextChars {
+			return nil, fmt.Errorf(
+				"item %q exceeds max text chars %d: %w",
+				item.ID,
+				options.MaxTextChars,
+				ErrTextTooLong,
+			)
+		}
+
 		itemChars := len(item.Text)
 		if itemChars > options.MaxChars {
 			return nil, fmt.Errorf(
@@ -105,4 +142,43 @@ func SplitRequest(request Request, options BatchOptions) ([]Request, error) {
 	}
 
 	return batches, nil
+}
+
+// TranslateBatchFunc translates one prepared request batch.
+type TranslateBatchFunc func(
+	ctx context.Context,
+	request Request,
+) ([]TranslatedItem, error)
+
+// TranslateBatches validates request, splits by limits, and translates batches.
+func TranslateBatches(
+	ctx context.Context,
+	request Request,
+	capabilities Capabilities,
+	translateBatch TranslateBatchFunc,
+) ([]TranslatedItem, error) {
+	if translateBatch == nil {
+		return nil, fmt.Errorf("translate batch function is required: %w", ErrInvalidRequest)
+	}
+	if err := ValidateRequest(request); err != nil {
+		return nil, err
+	}
+
+	batchOptions := ResolveBatchOptions(request.Batch, capabilities)
+	batches, err := SplitRequest(request, batchOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]TranslatedItem, 0, len(request.Items))
+	for _, batch := range batches {
+		batchItems, err := translateBatch(ctx, batch)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, batchItems...)
+	}
+
+	return items, nil
 }
