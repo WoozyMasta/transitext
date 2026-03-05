@@ -21,8 +21,8 @@ type registryData struct {
 }
 
 var (
-	//go:embed db.json
-	languagesDB []byte
+	//go:embed registry.json
+	languagesRegistryDB []byte
 
 	registryOnce sync.Once
 	registry     registryData
@@ -139,10 +139,10 @@ func loadRegistry() *registryData {
 			LocaleAliases:     make(map[string]string),
 			ProviderOverrides: make(map[string]map[string]string),
 		}
-		if len(languagesDB) == 0 {
+		if len(languagesRegistryDB) == 0 {
 			return
 		}
-		if err := json.Unmarshal(languagesDB, &registry); err != nil {
+		if err := json.Unmarshal(languagesRegistryDB, &registry); err != nil {
 			registry = registryData{}
 		}
 	})
