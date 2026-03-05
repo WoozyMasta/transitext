@@ -175,6 +175,63 @@ func main() {
 }
 ```
 
+## Language Mapping in Translation Flow
+
+`langmap` helps when input language names come from config, UI, or legacy
+tools and are not guaranteed to be strict provider codes.
+
+```go
+package main
+
+import (
+    "context"
+    "log"
+
+    "github.com/woozymasta/transitext"
+    "github.com/woozymasta/transitext/langmap"
+    "github.com/woozymasta/transitext/providers"
+)
+
+func main() {
+    registry, _ := providers.NewDefaultRegistry()
+    translator, _ := registry.Build("deepl", nil)
+
+    source, ok := langmap.ResolveForProvider("deepl", "english")
+    if !ok {
+        log.Fatal("unknown source language")
+    }
+    target, ok := langmap.ResolveForProvider("deepl", "chinesesimp")
+    if !ok {
+        log.Fatal("unknown target language")
+    }
+
+    result, err := translator.Translate(context.Background(), transitext.Request{
+        SourceLang: source,
+        TargetLang: target,
+        Items:      []transitext.Item{{ID: "1", Text: "About"}},
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    log.Println(result.Items[0].Text)
+}
+```
+
+You can also validate support before translation and select only compatible
+providers for current language:
+
+```go
+code, ok := langmap.SupportedByProvider("deepl", "alapmunte")
+if !ok {
+    log.Fatal("deepl does not support requested language")
+}
+
+providers := langmap.SupportingProviders("ukrainian")
+log.Printf("providers supporting ukrainian: %v", providers)
+_ = code
+```
+
 ## Testing Notes
 
 Network integration checks for free providers are part of the provider test
