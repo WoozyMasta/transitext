@@ -84,6 +84,47 @@ func SupportingProviders(input string) []string {
 	return result
 }
 
+// Providers returns known provider names from support registry.
+func Providers() []string {
+	data := loadSupport()
+	if data == nil {
+		return nil
+	}
+
+	result := make([]string, len(data.Provider))
+	copy(result, data.Provider)
+
+	return result
+}
+
+// SupportedLanguages returns provider-supported language codes.
+//
+// For inherited providers this function resolves the final provider set.
+func SupportedLanguages(provider string) ([]string, bool) {
+	data := loadSupport()
+	if data == nil {
+		return nil, false
+	}
+
+	providerKey := strings.ToLower(strings.TrimSpace(provider))
+	if providerKey == "" {
+		return nil, false
+	}
+
+	set, ok := providerCodeSet(providerKey, data)
+	if !ok {
+		return nil, false
+	}
+
+	result := make([]string, 0, len(set))
+	for _, code := range set {
+		result = append(result, code)
+	}
+	slices.Sort(result)
+
+	return result, true
+}
+
 // loadSupport lazily decodes embedded provider support payload.
 func loadSupport() *supportData {
 	supportOnce.Do(func() {
