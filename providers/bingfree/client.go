@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/woozymasta/transitext"
 )
 
@@ -31,7 +30,7 @@ const (
 	// defaultTranslatePath is unofficial Bing translate endpoint.
 	defaultTranslatePath = "/ttranslatev3"
 
-	// defaultIid is Bing IID query value.
+	// defaultIid is fallback Bing IID query value.
 	defaultIid = "translator.5024.1"
 
 	// defaultUserAgent is browser-like UA used for web endpoints.
@@ -48,6 +47,9 @@ const (
 
 	// defaultMaxTextChars is per-item text length bound.
 	defaultMaxTextChars = 1000
+
+	// defaultMaxEptTextChars is max text length for EPT mode.
+	defaultMaxEptTextChars = 3000
 )
 
 //nolint:gosec // Static parser pattern, not credential material.
@@ -88,8 +90,26 @@ type Translator struct {
 	// hostURL stores normalized Bing host URL.
 	hostURL string
 
-	// credentials stores cached provider credentials.
-	credentials credentials
+	// credToken is Bing request token.
+	credToken string
+
+	// credIG is request group id from translator page.
+	credIG string
+
+	// credIID is request iid from translator page.
+	credIID string
+
+	// credTranslatorURL stores canonical translator page URL for Referer.
+	credTranslatorURL string
+
+	// credKey is Bing numeric key.
+	credKey int64
+
+	// credCount is monotonically increasing request suffix counter.
+	credCount int64
+
+	// credExpiresAtUnixMilli is token expiration timestamp.
+	credExpiresAtUnixMilli int64
 
 	// maxItems limits batch size by items.
 	maxItems int
@@ -102,18 +122,6 @@ type Translator struct {
 
 	// credentialsLock guards credentials refresh.
 	credentialsLock sync.Mutex
-}
-
-// credentials stores Bing token material with expiration.
-type credentials struct {
-	// expiration is token expiration timestamp.
-	expiration time.Time
-
-	// token is Bing request token.
-	token string
-
-	// key is Bing numeric key.
-	key int64
 }
 
 // New creates bingfree provider.
@@ -206,10 +214,15 @@ func (translator *Translator) translateBatch(
 	ctx context.Context,
 	request transitext.Request,
 ) ([]transitext.TranslatedItem, error) {
-	creds, err := translator.getOrUpdateCredentials(ctx)
+	key, token, err := translator.getOrUpdateCredentials(ctx)
 	if err != nil {
 		return nil, err
 	}
+	translator.credentialsLock.Lock()
+	ig := translator.credIG
+	iid := translator.credIID
+	translatorURL := translator.credTranslatorURL
+	translator.credentialsLock.Unlock()
 
 	source := strings.TrimSpace(request.SourceLang)
 	if source == "" || strings.EqualFold(source, "auto") {
@@ -221,7 +234,11 @@ func (translator *Translator) translateBatch(
 	for _, item := range request.Items {
 		text, detectedSource, err := translator.translateOne(
 			ctx,
-			creds,
+			key,
+			token,
+			ig,
+			iid,
+			translatorURL,
 			bingHotPatch(source),
 			bingHotPatch(target),
 			item.Text,
@@ -243,74 +260,135 @@ func (translator *Translator) translateBatch(
 // getOrUpdateCredentials returns cached credentials or refreshes when expired.
 func (translator *Translator) getOrUpdateCredentials(
 	ctx context.Context,
-) (credentials, error) {
+) (int64, string, error) {
 	translator.credentialsLock.Lock()
 	defer translator.credentialsLock.Unlock()
 
 	now := time.Now()
-	if translator.credentials.token != "" && now.Before(translator.credentials.expiration) {
-		return translator.credentials, nil
+	if translator.credToken != "" && now.UnixMilli() < translator.credExpiresAtUnixMilli {
+		return translator.credKey, translator.credToken, nil
 	}
 
 	urlValue := translator.hostURL + defaultTranslatorPath
 	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, urlValue, nil)
 	if err != nil {
-		return credentials{}, fmt.Errorf("bingfree build credentials request: %w", err)
+		return 0, "", fmt.Errorf("bingfree build credentials request: %w", err)
 	}
 
 	//nolint:gosec // Provider intentionally performs outbound HTTP requests.
 	response, err := translator.client.Do(httpRequest)
 	if err != nil {
-		return credentials{}, fmt.Errorf("bingfree credentials request failed: %w", err)
+		return 0, "", fmt.Errorf("bingfree credentials request failed: %w", err)
 	}
 
 	defer func() { _ = response.Body.Close() }()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return credentials{}, fmt.Errorf("bingfree read credentials response: %w", err)
+		return 0, "", fmt.Errorf("bingfree read credentials response: %w", err)
 	}
 	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return credentials{}, fmt.Errorf(
+		return 0, "", fmt.Errorf(
 			"bingfree credentials response %d: %w",
 			response.StatusCode,
 			transitext.ErrProviderTemporary,
 		)
 	}
 
-	parsed, err := parseCredentials(string(body))
-	if err != nil {
-		return credentials{}, err
+	translatorURL := translator.hostURL + defaultTranslatorPath
+	if response.Request != nil && response.Request.URL != nil {
+		translatorURL = response.Request.URL.String()
 	}
-	translator.credentials = parsed
 
-	return parsed, nil
+	key, token, ig, iid, expiresAtUnixMilli, err := parseCredentials(string(body))
+	if err != nil {
+		return 0, "", err
+	}
+	translator.credKey = key
+	translator.credToken = token
+	translator.credExpiresAtUnixMilli = expiresAtUnixMilli
+	translator.credCount = 0
+	translator.credIG = ig
+	translator.credIID = iid
+	translator.credTranslatorURL = translatorURL
+
+	return translator.credKey, translator.credToken, nil
 }
 
 // translateOne translates one item via Bing translate endpoint.
 func (translator *Translator) translateOne(
 	ctx context.Context,
-	creds credentials,
+	key int64,
+	token string,
+	ig string,
+	iid string,
+	translatorURL string,
 	source string,
 	target string,
 	text string,
 ) (string, string, error) {
+	useEPT := len(text) <= defaultMaxEptTextChars
+	translated, detectedSource, statusCode, err := translator.translateOneMode(
+		ctx,
+		key,
+		token,
+		ig,
+		iid,
+		translatorURL,
+		source,
+		target,
+		text,
+		useEPT,
+	)
+	if err == nil {
+		return translated, detectedSource, nil
+	}
+
+	// EPT may reject some language pairs. Retry legacy mode once.
+	if useEPT && statusCode >= 400 && statusCode < 500 && statusCode != http.StatusTooManyRequests {
+		fallbackText, fallbackSource, _, fallbackErr := translator.translateOneMode(
+			ctx,
+			key,
+			token,
+			ig,
+			iid,
+			translatorURL,
+			source,
+			target,
+			text,
+			false,
+		)
+		return fallbackText, fallbackSource, fallbackErr
+	}
+
+	return "", "", err
+}
+
+// translateOneMode translates one item via Bing translate endpoint mode.
+func (translator *Translator) translateOneMode(
+	ctx context.Context,
+	key int64,
+	token string,
+	ig string,
+	iid string,
+	translatorURL string,
+	source string,
+	target string,
+	text string,
+	useEPT bool,
+) (string, string, int, error) {
 	values := url.Values{
 		"fromLang": {source},
 		"text":     {text},
 		"to":       {target},
-		"token":    {creds.token},
-		"key":      {strconv.FormatInt(creds.key, 10)},
+		"token":    {token},
+		"key":      {strconv.FormatInt(key, 10)},
+	}
+	if useEPT {
+		values.Set("tryFetchingGenderDebiasedTranslations", "true")
 	}
 
-	ig := strings.ToUpper(strings.ReplaceAll(uuid.NewString(), "-", ""))
-	endpoint := fmt.Sprintf(
-		"%s%s?isVertical=1&IG=%s&IID=%s",
-		translator.hostURL,
-		defaultTranslatePath,
-		ig,
-		defaultIid,
-	)
+	endpoint := translator.buildTranslateEndpoint(ig, iid, useEPT)
 	httpRequest, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
@@ -318,38 +396,46 @@ func (translator *Translator) translateOne(
 		strings.NewReader(values.Encode()),
 	)
 	if err != nil {
-		return "", "", fmt.Errorf("bingfree build translate request: %w", err)
+		return "", "", 0, fmt.Errorf("bingfree build translate request: %w", err)
 	}
 	httpRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if strings.TrimSpace(translatorURL) != "" {
+		httpRequest.Header.Set("Referer", translatorURL)
+	}
 
 	//nolint:gosec // Provider intentionally performs outbound HTTP requests.
 	response, err := translator.client.Do(httpRequest)
 	if err != nil {
-		return "", "", fmt.Errorf("bingfree translate request failed: %w", err)
+		return "", "", 0, fmt.Errorf("bingfree translate request failed: %w", err)
 	}
 
 	defer func() { _ = response.Body.Close() }()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return "", "", fmt.Errorf("bingfree read response: %w", err)
+		return "", "", response.StatusCode, fmt.Errorf("bingfree read response: %w", err)
 	}
 	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return "", "", fmt.Errorf(
+		return "", "", response.StatusCode, fmt.Errorf(
 			"bingfree response %d: %w",
 			response.StatusCode,
 			transitext.ErrProviderTemporary,
 		)
 	}
 
-	return parseTranslateResponse(body)
+	translated, detectedSource, parseErr := parseTranslateResponse(body)
+	if parseErr != nil {
+		return "", "", response.StatusCode, parseErr
+	}
+
+	return translated, detectedSource, response.StatusCode, nil
 }
 
 // parseCredentials extracts token and key from translator page script.
-func parseCredentials(html string) (credentials, error) {
+func parseCredentials(html string) (int64, string, string, string, int64, error) {
 	index := strings.Index(html, credentialsPrefix)
 	if index < 0 {
-		return credentials{}, fmt.Errorf(
+		return 0, "", "", "", 0, fmt.Errorf(
 			"bingfree credentials not found: %w",
 			transitext.ErrProviderPermanent,
 		)
@@ -358,40 +444,120 @@ func parseCredentials(html string) (credentials, error) {
 	start := index + len(credentialsPrefix)
 	end := strings.Index(html[start:], "]")
 	if end < 0 {
-		return credentials{}, fmt.Errorf(
+		return 0, "", "", "", 0, fmt.Errorf(
 			"bingfree credentials malformed: %w",
 			transitext.ErrProviderPermanent,
 		)
 	}
 	payload := html[start : start+end]
-	parts := strings.SplitN(payload, ",", 2)
-	if len(parts) != 2 {
-		return credentials{}, fmt.Errorf(
+
+	var fields []any
+	if err := json.Unmarshal([]byte("["+payload+"]"), &fields); err != nil || len(fields) < 2 {
+		return 0, "", "", "", 0, fmt.Errorf(
 			"bingfree credentials malformed: %w",
 			transitext.ErrProviderPermanent,
 		)
 	}
 
-	key, err := strconv.ParseInt(strings.TrimSpace(parts[0]), 10, 64)
-	if err != nil {
+	key, keyOK := asInt64(fields[0])
+	if !keyOK {
 		key = time.Now().UnixMilli()
 	}
 
-	token := strings.TrimSpace(parts[1])
-	token = strings.Trim(token, `"`)
+	token, _ := fields[1].(string)
+	token = strings.TrimSpace(token)
 	if token == "" {
-		return credentials{}, fmt.Errorf(
+		return 0, "", "", "", 0, fmt.Errorf(
 			"bingfree token not found: %w",
 			transitext.ErrProviderPermanent,
 		)
 	}
 
-	expiration := time.UnixMilli(key + 3600000)
-	return credentials{
-		token:      token,
-		key:        key,
-		expiration: expiration,
-	}, nil
+	ig := extractBetween(html, `IG:"`, `"`)
+	iid := extractBetween(html, `data-iid="`, `"`)
+	if strings.TrimSpace(iid) == "" {
+		iid = defaultIid
+	}
+
+	expiryInterval := int64(3600000)
+	if len(fields) >= 3 {
+		if value, ok := asInt64(fields[2]); ok && value > 0 {
+			expiryInterval = value
+		}
+	}
+
+	return key, token, ig, iid, key + expiryInterval, nil
+}
+
+// buildTranslateEndpoint builds one translate endpoint URL.
+func (translator *Translator) buildTranslateEndpoint(
+	ig string,
+	iid string,
+	useEPT bool,
+) string {
+	iid = strings.TrimSpace(iid)
+	if iid == "" {
+		iid = defaultIid
+	}
+	endpoint := fmt.Sprintf(
+		"%s%s?isVertical=1&IG=%s&IID=%s",
+		translator.hostURL,
+		defaultTranslatePath,
+		url.QueryEscape(strings.TrimSpace(ig)),
+		url.QueryEscape(iid),
+	)
+
+	if useEPT {
+		endpoint += "&SFX=" + strconv.FormatInt(translator.nextRequestCount(), 10)
+		endpoint += "&ref=TThis&edgepdftranslator=1"
+	}
+
+	return endpoint
+}
+
+// nextRequestCount returns next request suffix counter.
+func (translator *Translator) nextRequestCount() int64 {
+	translator.credentialsLock.Lock()
+	defer translator.credentialsLock.Unlock()
+
+	translator.credCount++
+	return translator.credCount
+}
+
+// extractBetween extracts substring between prefix and suffix.
+func extractBetween(text string, prefix string, suffix string) string {
+	start := strings.Index(text, prefix)
+	if start < 0 {
+		return ""
+	}
+	start += len(prefix)
+	end := strings.Index(text[start:], suffix)
+	if end < 0 {
+		return ""
+	}
+
+	return text[start : start+end]
+}
+
+// asInt64 converts common json number types into int64.
+func asInt64(value any) (int64, bool) {
+	switch typed := value.(type) {
+	case float64:
+		return int64(typed), true
+	case int64:
+		return typed, true
+	case int:
+		return int64(typed), true
+	case string:
+		parsed, err := strconv.ParseInt(strings.TrimSpace(typed), 10, 64)
+		if err != nil {
+			return 0, false
+		}
+
+		return parsed, true
+	default:
+		return 0, false
+	}
 }
 
 // parseTranslateResponse parses Bing translation response payload.

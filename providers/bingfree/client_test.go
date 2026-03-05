@@ -28,7 +28,7 @@ func TestTranslateFlow(t *testing.T) {
 				switch request.URL.Path {
 				case "/translator":
 					pageCalls++
-					body := `<html><script>var params_AbusePreventionHelper = [1700000000000,"token123"];</script></html>`
+					body := `<html data-iid="translator.7777.1"><script>var params_AbusePreventionHelper = [1700000000000,"token123",3600000];</script>IG:"ABC123"</html>`
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(strings.NewReader(body)),
@@ -71,12 +71,26 @@ func TestTranslateFlow(t *testing.T) {
 func TestParseCredentials(t *testing.T) {
 	t.Parallel()
 
-	creds, err := parseCredentials(`var params_AbusePreventionHelper = [1700000000000,"token123"];`)
+	key, token, ig, iid, expiresAtUnixMilli, err := parseCredentials(
+		`<div data-iid="translator.7777.1"></div>IG:"ABC123";var params_AbusePreventionHelper = [1700000000000,"token123",3600000];`,
+	)
 	if err != nil {
 		t.Fatalf("parseCredentials error: %v", err)
 	}
-	if creds.token != "token123" {
-		t.Fatalf("token = %q, want token123", creds.token)
+	if token != "token123" {
+		t.Fatalf("token = %q, want token123", token)
+	}
+	if key <= 0 {
+		t.Fatalf("key = %d, want > 0", key)
+	}
+	if expiresAtUnixMilli <= key {
+		t.Fatalf("expires_at = %d, want > key %d", expiresAtUnixMilli, key)
+	}
+	if ig != "ABC123" {
+		t.Fatalf("ig = %q, want ABC123", ig)
+	}
+	if iid != "translator.7777.1" {
+		t.Fatalf("iid = %q, want translator.7777.1", iid)
 	}
 }
 
