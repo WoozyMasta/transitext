@@ -26,10 +26,10 @@ func Example_pipeline() {
 	}
 	fallback := &exampleStaticTranslator{
 		capabilities: transitext.Capabilities{
-			Provider: "microsoftfree",
+			Provider: "microsoft",
 		},
 		result: transitext.Result{
-			Provider: "microsoftfree",
+			Provider: "microsoft",
 			Items: []transitext.TranslatedItem{
 				{ID: "1", Text: "Привет"},
 			},

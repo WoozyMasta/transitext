@@ -17,7 +17,7 @@ import (
 	"github.com/woozymasta/transitext/providers/google"
 	"github.com/woozymasta/transitext/providers/googlefree"
 	"github.com/woozymasta/transitext/providers/libre"
-	"github.com/woozymasta/transitext/providers/microsoftfree"
+	"github.com/woozymasta/transitext/providers/microsoft"
 	"github.com/woozymasta/transitext/providers/openai"
 	"github.com/woozymasta/transitext/providers/yandex"
 	"github.com/woozymasta/transitext/providers/yandexfree"
@@ -52,15 +52,15 @@ func RegisterDefaults(registry *transitext.ProviderRegistry) error {
 		return err
 	}
 
-	if err := registry.Register("microsoftfree", func(
+	if err := registry.Register("microsoft", func(
 		options map[string]any,
 	) (transitext.Translator, error) {
-		decoded, err := decodeOptions[microsoftfree.Options](options)
+		decoded, err := decodeOptions[microsoft.Options](options)
 		if err != nil {
-			return nil, fmt.Errorf("decode microsoftfree options: %w", err)
+			return nil, fmt.Errorf("decode microsoft options: %w", err)
 		}
 
-		return microsoftfree.New(decoded), nil
+		return microsoft.New(decoded), nil
 	}); err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ func TestNewDefaultRegistry(t *testing.T) {
 		"google",
 		"googlefree",
 		"libre",
-		"microsoftfree",
+		"microsoft",
 		"openai",
 		"yandex",
 		"yandexfree",

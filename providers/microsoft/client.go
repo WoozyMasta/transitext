@@ -2,8 +2,8 @@
 // Copyright (c) 2026 WoozyMasta
 // Source: github.com/woozymasta/transitext
 
-// Package microsoftfree provides translation via Edge unofficial endpoint.
-package microsoftfree
+// Package microsoft provides translation via Edge unofficial endpoint.
+package microsoft
 
 import (
 	"bytes"
@@ -37,9 +37,12 @@ const (
 
 	// defaultMaxChars is default request text-char limit per batch.
 	defaultMaxChars = 4000
+
+	// modeCustomHeaders uses provided auth headers directly.
+	modeCustomHeaders = "custom_headers"
 )
 
-// Options controls microsoftfree translator behavior.
+// Options controls microsoft translator behavior.
 type Options struct {
 	// HTTPClient is optional custom HTTP client.
 	HTTPClient *http.Client `json:"-" yaml:"-"`
@@ -52,6 +55,15 @@ type Options struct {
 
 	// TranslateURL overrides translate endpoint URL.
 	TranslateURL string `json:"translate_url,omitempty" yaml:"translate_url,omitempty"`
+
+	// Mode selects auth mode: "edge_free" or "custom_headers".
+	Mode string `json:"mode,omitempty" yaml:"mode,omitempty"`
+
+	// AuthenticationHeaders are applied directly in custom_headers mode.
+	AuthenticationHeaders map[string]string `json:"authentication_headers,omitempty" yaml:"authentication_headers,omitempty"`
+
+	// TranslateOptions adds optional query params to translate endpoint.
+	TranslateOptions map[string]string `json:"translate_options,omitempty" yaml:"translate_options,omitempty"`
 
 	// UserAgent overrides default request user agent.
 	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty"`
@@ -72,10 +84,19 @@ type Translator struct {
 	client *http.Client
 
 	// authURL stores auth endpoint URL.
-	authURL string
+	authURL *url.URL
 
 	// translateURL stores translate endpoint URL.
-	translateURL string
+	translateURL *url.URL
+
+	// authenticationHeaders stores custom auth headers.
+	authenticationHeaders map[string]string
+
+	// translateOptions stores extra query options.
+	translateOptions map[string]string
+
+	// useCustomHeadersMode selects custom_headers auth mode.
+	useCustomHeadersMode bool
 
 	// maxItems limits batch item count.
 	maxItems int
@@ -84,7 +105,7 @@ type Translator struct {
 	maxChars int
 }
 
-// New creates microsoftfree translator.
+// New creates microsoft translator.
 func New(options Options) *Translator {
 	client := options.HTTPClient
 	if client == nil {
@@ -126,18 +147,23 @@ func New(options Options) *Translator {
 	}
 
 	return &Translator{
-		client:       client,
-		authURL:      authURL,
-		translateURL: translateURL,
-		maxItems:     maxItems,
-		maxChars:     maxChars,
+		client:               client,
+		authURL:              parseURLOrDefault(authURL, defaultAuthURL),
+		translateURL:         parseURLOrDefault(translateURL, defaultTranslateURL),
+		useCustomHeadersMode: isCustomHeadersMode(options.Mode),
+		authenticationHeaders: cloneHeaders(
+			options.AuthenticationHeaders,
+		),
+		translateOptions: cloneHeaders(options.TranslateOptions),
+		maxItems:         maxItems,
+		maxChars:         maxChars,
 	}
 }
 
 // Capabilities reports provider capabilities.
 func (translator *Translator) Capabilities() transitext.Capabilities {
 	return transitext.NewCapabilities(
-		"microsoftfree",
+		"microsoft",
 		transitext.ProviderUnstable,
 		false,
 		transitext.CapabilitiesOptions{
@@ -153,7 +179,7 @@ func (translator *Translator) Translate(
 	ctx context.Context,
 	request transitext.Request,
 ) (transitext.Result, error) {
-	token, err := translator.fetchToken(ctx)
+	authHeaders, err := translator.resolveAuthHeaders(ctx)
 	if err != nil {
 		return transitext.Result{}, err
 	}
@@ -166,7 +192,7 @@ func (translator *Translator) Translate(
 			[]transitext.TranslatedItem,
 			error,
 		) {
-			return translator.translateBatch(batchCtx, token, batch)
+			return translator.translateBatch(batchCtx, authHeaders, batch)
 		},
 	)
 	if err != nil {
@@ -174,9 +200,32 @@ func (translator *Translator) Translate(
 	}
 
 	return transitext.Result{
-		Provider: "microsoftfree",
+		Provider: "microsoft",
 		Items:    items,
 	}, nil
+}
+
+// resolveAuthHeaders resolves headers for selected mode.
+func (translator *Translator) resolveAuthHeaders(
+	ctx context.Context,
+) (map[string]string, error) {
+	if translator.useCustomHeadersMode {
+		if len(translator.authenticationHeaders) == 0 {
+			return nil, fmt.Errorf(
+				"microsoft authentication_headers are required in custom_headers mode: %w",
+				transitext.ErrInvalidRequest,
+			)
+		}
+
+		return cloneHeaders(translator.authenticationHeaders), nil
+	}
+
+	token, err := translator.fetchToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{"Authorization": normalizeBearer(token)}, nil
 }
 
 // fetchToken obtains edge auth token.
@@ -184,28 +233,28 @@ func (translator *Translator) fetchToken(ctx context.Context) (string, error) {
 	request, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		translator.authURL,
+		translator.authURL.String(),
 		nil,
 	)
 	if err != nil {
-		return "", fmt.Errorf("build microsoftfree auth request: %w", err)
+		return "", fmt.Errorf("build microsoft auth request: %w", err)
 	}
 
 	//nolint:gosec // Provider intentionally performs outbound HTTP requests.
 	response, err := translator.client.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("microsoftfree auth request: %w", err)
+		return "", fmt.Errorf("microsoft auth request: %w", err)
 	}
 
 	defer func() { _ = response.Body.Close() }()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return "", fmt.Errorf("read microsoftfree auth response: %w", err)
+		return "", fmt.Errorf("read microsoft auth response: %w", err)
 	}
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return "", fmt.Errorf(
-			"microsoftfree auth response %d: %w",
+			"microsoft auth response %d: %w",
 			response.StatusCode,
 			transitext.ErrProviderTemporary,
 		)
@@ -213,7 +262,7 @@ func (translator *Translator) fetchToken(ctx context.Context) (string, error) {
 
 	token := strings.TrimSpace(string(body))
 	if token == "" {
-		return "", fmt.Errorf("microsoftfree empty token: %w", transitext.ErrProviderPermanent)
+		return "", fmt.Errorf("microsoft empty token: %w", transitext.ErrProviderPermanent)
 	}
 
 	return token, nil
@@ -222,25 +271,32 @@ func (translator *Translator) fetchToken(ctx context.Context) (string, error) {
 // translateBatch translates one batch with a single API call.
 func (translator *Translator) translateBatch(
 	ctx context.Context,
-	token string,
+	authHeaders map[string]string,
 	request transitext.Request,
 ) ([]transitext.TranslatedItem, error) {
 	source := strings.TrimSpace(request.SourceLang)
-	if source == "" || strings.EqualFold(source, "auto") {
-		// No reliable auto-detect in free edge mode; keep predictable default.
-		source = "en"
-	}
+	isAutoSource := source == "" || strings.EqualFold(source, "auto")
 
-	endpoint, err := url.Parse(translator.translateURL)
-	if err != nil {
-		return nil, fmt.Errorf("parse microsoftfree translate url: %w", err)
-	}
+	endpoint := *translator.translateURL
 
 	query := endpoint.Query()
 	query.Set("api-version", "3.0")
 	query.Set("includeSentenceLength", "false")
-	query.Set("from", source)
 	query.Set("to", request.TargetLang)
+	if !isAutoSource {
+		query.Set("from", source)
+	}
+	for key, value := range translator.translateOptions {
+		normalizedKey := strings.TrimSpace(key)
+		if normalizedKey == "" {
+			continue
+		}
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+
+		query.Set(normalizedKey, strings.TrimSpace(value))
+	}
 	endpoint.RawQuery = query.Encode()
 
 	payload := make([]map[string]string, 0, len(request.Items))
@@ -250,7 +306,7 @@ func (translator *Translator) translateBatch(
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("marshal microsoftfree payload: %w", err)
+		return nil, fmt.Errorf("marshal microsoft payload: %w", err)
 	}
 
 	httpRequest, err := http.NewRequestWithContext(
@@ -260,32 +316,87 @@ func (translator *Translator) translateBatch(
 		bytes.NewReader(payloadBytes),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("build microsoftfree translate request: %w", err)
+		return nil, fmt.Errorf("build microsoft translate request: %w", err)
 	}
 	httpRequest.Header.Set("Content-Type", "application/json")
-	httpRequest.Header.Set("Authorization", token)
+	for key, value := range authHeaders {
+		httpRequest.Header.Set(key, value)
+	}
 
 	//nolint:gosec // Provider intentionally performs outbound HTTP requests.
 	response, err := translator.client.Do(httpRequest)
 	if err != nil {
-		return nil, fmt.Errorf("microsoftfree translate request: %w", err)
+		return nil, fmt.Errorf("microsoft translate request: %w", err)
 	}
 
 	defer func() { _ = response.Body.Close() }()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read microsoftfree translate response: %w", err)
+		return nil, fmt.Errorf("read microsoft translate response: %w", err)
 	}
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return nil, fmt.Errorf(
-			"microsoftfree translate response %d: %w",
+			"microsoft translate response %d: %w",
 			response.StatusCode,
 			transitext.ErrProviderTemporary,
 		)
 	}
 
 	return parseBatchResponse(request.Items, body)
+}
+
+// normalizeBearer normalizes token into Bearer header value.
+func normalizeBearer(token string) string {
+	trimmed := strings.TrimSpace(token)
+	if strings.HasPrefix(strings.ToLower(trimmed), "bearer ") {
+		return trimmed
+	}
+
+	return "Bearer " + trimmed
+}
+
+// normalizeMode returns supported mode or default.
+func isCustomHeadersMode(mode string) bool {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case modeCustomHeaders:
+		return true
+	default:
+		return false
+	}
+}
+
+// cloneHeaders copies key-value map.
+func cloneHeaders(in map[string]string) map[string]string {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		normalizedKey := strings.TrimSpace(key)
+		if normalizedKey == "" {
+			continue
+		}
+
+		out[normalizedKey] = strings.TrimSpace(value)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+
+	return out
+}
+
+// parseURLOrDefault parses candidate URL or returns parsed fallback.
+func parseURLOrDefault(candidate string, fallback string) *url.URL {
+	parsed, err := url.Parse(strings.TrimSpace(candidate))
+	if err == nil && parsed != nil && parsed.Scheme != "" && parsed.Host != "" {
+		return parsed
+	}
+
+	parsed, _ = url.Parse(fallback)
+	return parsed
 }
 
 // parseBatchResponse decodes edge batch translation response.
@@ -295,11 +406,11 @@ func parseBatchResponse(
 ) ([]transitext.TranslatedItem, error) {
 	var responseData []map[string]any
 	if err := json.Unmarshal(payload, &responseData); err != nil {
-		return nil, fmt.Errorf("parse microsoftfree response: %w", err)
+		return nil, fmt.Errorf("parse microsoft response: %w", err)
 	}
 	if len(responseData) != len(input) {
 		return nil, fmt.Errorf(
-			"microsoftfree response size mismatch: got %d, want %d: %w",
+			"microsoft response size mismatch: got %d, want %d: %w",
 			len(responseData),
 			len(input),
 			transitext.ErrProviderPermanent,
@@ -312,7 +423,7 @@ func parseBatchResponse(
 		translationsValue, ok := item["translations"]
 		if !ok {
 			return nil, fmt.Errorf(
-				"microsoftfree response missing translation at index %d: %w",
+				"microsoft response missing translation at index %d: %w",
 				index,
 				transitext.ErrProviderPermanent,
 			)
@@ -320,7 +431,7 @@ func parseBatchResponse(
 		translations, ok := translationsValue.([]any)
 		if !ok || len(translations) == 0 {
 			return nil, fmt.Errorf(
-				"microsoftfree response missing translation at index %d: %w",
+				"microsoft response missing translation at index %d: %w",
 				index,
 				transitext.ErrProviderPermanent,
 			)
@@ -328,7 +439,7 @@ func parseBatchResponse(
 		first, ok := translations[0].(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf(
-				"microsoftfree response malformed translation at index %d: %w",
+				"microsoft response malformed translation at index %d: %w",
 				index,
 				transitext.ErrProviderPermanent,
 			)
@@ -336,7 +447,7 @@ func parseBatchResponse(
 		text, ok := first["text"].(string)
 		if !ok || text == "" {
 			return nil, fmt.Errorf(
-				"microsoftfree response missing text at index %d: %w",
+				"microsoft response missing text at index %d: %w",
 				index,
 				transitext.ErrProviderPermanent,
 			)

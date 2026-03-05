@@ -31,7 +31,7 @@ func TestFreeProvidersIntegration(t *testing.T) {
 		"googlefree",
 		"bingfree",
 		"deeplfree",
-		"microsoftfree",
+		"microsoft",
 		"yandexfree",
 	}
 

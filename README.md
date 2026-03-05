@@ -38,7 +38,7 @@ Free or unofficial providers (experimental):
 * `googlefree`
 * `bingfree`
 * `deeplfree`
-* `microsoftfree`
+* `microsoft`
 * `yandexfree`
 
 > [!WARNING]  
@@ -111,7 +111,7 @@ Observed behavior from live free-provider probes in this workspace:
 
 * `deeplfree` and `yandexfree` reacted to context more often.
 * `googlefree` reacted in some cases, but consistency was lower.
-* `microsoftfree` and `bingfree` were mostly insensitive to context
+* `microsoft` and `bingfree` were mostly insensitive to context
   in tested pairs.
 
 So this feature is useful for experimentation and batch prefill, but not a
