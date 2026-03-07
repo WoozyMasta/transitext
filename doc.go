@@ -26,8 +26,8 @@ Typical flow:
 Minimal pipeline example:
 
 	pipeline := transitext.Wrap(base).
-		Retry(transitext.RetryOptions{MaxAttempts: 3}).
-		RateLimit(transitext.RateLimitOptions{RequestsPerSecond: 2}).
+		Retry(transitext.RetryOptions{Attempts: 3}).
+		RateLimit(transitext.RateLimitOptions{MinInterval: 500 * time.Millisecond}).
 		LongText(transitext.LongTextOptions{MaxTextChars: 4000}).
 		Build()
 

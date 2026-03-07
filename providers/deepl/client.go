@@ -41,29 +41,29 @@ type Options struct {
 	HTTPClient *http.Client `json:"-" yaml:"-"`
 
 	// URL overrides DeepL endpoint URL.
-	URL string `json:"url,omitempty" yaml:"url,omitempty"`
+	URL string `json:"url,omitempty" yaml:"url,omitempty" jsonschema:"format=uri,example=https://api.deepl.com/v2/translate"`
 
 	// Auth key for DeepL API.
 	//nolint:gosec // Runtime credential from external config.
-	AuthKey string `json:"auth_key,omitempty" yaml:"auth_key,omitempty"`
+	AuthKey string `json:"auth_key,omitempty" yaml:"auth_key,omitempty" jsonschema:"minLength=1"`
 
 	// SourceLang sets default source language when request.SourceLang is empty.
-	SourceLang string `json:"source_lang,omitempty" yaml:"source_lang,omitempty"`
+	SourceLang string `json:"source_lang,omitempty" yaml:"source_lang,omitempty" jsonschema:"minLength=2,maxLength=16,example=EN"`
 
 	// Formality controls formality mode where supported.
-	Formality string `json:"formality,omitempty" yaml:"formality,omitempty"`
+	Formality string `json:"formality,omitempty" yaml:"formality,omitempty" jsonschema:"enum=default,enum=more,enum=less,enum=prefer_more,enum=prefer_less"`
 
 	// SplitSentences controls DeepL sentence splitting behavior.
-	SplitSentences string `json:"split_sentences,omitempty" yaml:"split_sentences,omitempty"`
+	SplitSentences string `json:"split_sentences,omitempty" yaml:"split_sentences,omitempty" jsonschema:"enum=0,enum=1,enum=nonewlines"`
 
 	// BatchMaxItems limits request batch size by item count.
-	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty"`
+	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty" jsonschema:"minimum=1,maximum=50,default=50"`
 
 	// BatchMaxChars limits request batch size by total chars.
-	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty"`
+	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty" jsonschema:"minimum=1,maximum=131072,default=50000"`
 
 	// Timeout is request timeout when HTTPClient is not provided.
-	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" jsonschema:"minimum=0,default=20000000000"`
 
 	// UseFreeAPI selects free endpoint when URL is empty.
 	UseFreeAPI bool `json:"use_free_api,omitempty" yaml:"use_free_api,omitempty"`

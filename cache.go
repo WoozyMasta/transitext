@@ -13,10 +13,12 @@ import (
 
 // CacheOptions controls cache wrapper behavior.
 type CacheOptions struct {
-	// IncludeHints includes request hints in cache key.
+	// IncludeHints adds `hints` fields into cache key.
+	// Enable this when hints can change translation output.
 	IncludeHints bool `json:"include_hints,omitempty" yaml:"include_hints,omitempty"`
 
-	// IncludeMetadata includes request metadata in cache key.
+	// IncludeMetadata adds request metadata into cache key.
+	// Enable this only if metadata affects provider output.
 	IncludeMetadata bool `json:"include_metadata,omitempty" yaml:"include_metadata,omitempty"`
 }
 

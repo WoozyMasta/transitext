@@ -51,31 +51,31 @@ type Options struct {
 	Request *transitext.HTTPRequestOptions `json:"request,omitempty" yaml:"request,omitempty"`
 
 	// AuthURL overrides auth endpoint URL.
-	AuthURL string `json:"auth_url,omitempty" yaml:"auth_url,omitempty"`
+	AuthURL string `json:"auth_url,omitempty" yaml:"auth_url,omitempty" jsonschema:"format=uri,example=https://edge.microsoft.com/translate/auth"`
 
 	// TranslateURL overrides translate endpoint URL.
-	TranslateURL string `json:"translate_url,omitempty" yaml:"translate_url,omitempty"`
+	TranslateURL string `json:"translate_url,omitempty" yaml:"translate_url,omitempty" jsonschema:"format=uri,example=https://api-edge.cognitive.microsofttranslator.com/translate"`
 
 	// Mode selects auth mode: "edge_free" or "custom_headers".
-	Mode string `json:"mode,omitempty" yaml:"mode,omitempty"`
+	Mode string `json:"mode,omitempty" yaml:"mode,omitempty" jsonschema:"enum=edge_free,enum=custom_headers,default=edge_free"`
 
 	// AuthenticationHeaders are applied directly in custom_headers mode.
-	AuthenticationHeaders map[string]string `json:"authentication_headers,omitempty" yaml:"authentication_headers,omitempty"`
+	AuthenticationHeaders map[string]string `json:"authentication_headers,omitempty" yaml:"authentication_headers,omitempty" jsonschema:"maxProperties=32"`
 
 	// TranslateOptions adds optional query params to translate endpoint.
-	TranslateOptions map[string]string `json:"translate_options,omitempty" yaml:"translate_options,omitempty"`
+	TranslateOptions map[string]string `json:"translate_options,omitempty" yaml:"translate_options,omitempty" jsonschema:"maxProperties=32"`
 
 	// UserAgent overrides default request user agent.
-	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty"`
+	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty" jsonschema:"maxLength=512"`
 
 	// Timeout is request timeout when HTTPClient is not provided.
-	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" jsonschema:"minimum=0,default=20000000000"`
 
 	// MaxItems limits items per one provider HTTP request.
-	MaxItems int `json:"max_items,omitempty" yaml:"max_items,omitempty"`
+	MaxItems int `json:"max_items,omitempty" yaml:"max_items,omitempty" jsonschema:"minimum=1,maximum=1000,default=20"`
 
 	// MaxChars limits total chars per one provider HTTP request.
-	MaxChars int `json:"max_chars,omitempty" yaml:"max_chars,omitempty"`
+	MaxChars int `json:"max_chars,omitempty" yaml:"max_chars,omitempty" jsonschema:"minimum=1,maximum=50000,default=4000"`
 }
 
 // Translator is unofficial edge translate provider.

@@ -36,26 +36,26 @@ type Options struct {
 	HTTPClient *http.Client `json:"-" yaml:"-"`
 
 	// BaseURL overrides official Google endpoint URL.
-	BaseURL string `json:"base_url,omitempty" yaml:"base_url,omitempty"`
+	BaseURL string `json:"base_url,omitempty" yaml:"base_url,omitempty" jsonschema:"format=uri,example=https://translation.googleapis.com/language/translate/v2"`
 
 	// API key for Google Translate API.
 	//nolint:gosec // Runtime credential from external config.
-	Key string `json:"key,omitempty" yaml:"key,omitempty"`
+	Key string `json:"key,omitempty" yaml:"key,omitempty" jsonschema:"minLength=1"`
 
 	// Format controls source text format: "text" or "html".
-	Format string `json:"format,omitempty" yaml:"format,omitempty"`
+	Format string `json:"format,omitempty" yaml:"format,omitempty" jsonschema:"enum=text,enum=html,default=text"`
 
 	// Model selects Google translation model when supported.
-	Model string `json:"model,omitempty" yaml:"model,omitempty"`
+	Model string `json:"model,omitempty" yaml:"model,omitempty" jsonschema:"maxLength=64"`
 
 	// Timeout is request timeout when HTTPClient is not provided.
-	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" jsonschema:"minimum=0,default=20000000000"`
 
 	// BatchMaxItems limits request batch size by item count.
-	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty"`
+	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty" jsonschema:"minimum=1,maximum=1000"`
 
 	// BatchMaxChars limits request batch size by total chars.
-	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty"`
+	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty" jsonschema:"minimum=1,maximum=30000,default=30000"`
 }
 
 // Translator is official Google Translate provider.

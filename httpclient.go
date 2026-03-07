@@ -13,13 +13,13 @@ import (
 // HTTPRequestOptions controls generic outbound request shaping for providers.
 type HTTPRequestOptions struct {
 	// Headers sets default headers applied when missing in request.
-	Headers map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Headers map[string]string `json:"headers,omitempty" yaml:"headers,omitempty" jsonschema:"maxProperties=64"`
 
 	// Cookies sets default cookies applied when request cookie header is empty.
-	Cookies map[string]string `json:"cookies,omitempty" yaml:"cookies,omitempty"`
+	Cookies map[string]string `json:"cookies,omitempty" yaml:"cookies,omitempty" jsonschema:"maxProperties=64"`
 
 	// UserAgent sets default User-Agent when request does not set it explicitly.
-	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty"`
+	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty" jsonschema:"maxLength=512"`
 }
 
 // HTTPRequestDefaults stores provider-owned defaults for request shaping.

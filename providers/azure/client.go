@@ -39,23 +39,23 @@ type Options struct {
 	HTTPClient *http.Client `json:"-" yaml:"-"`
 
 	// BaseURL overrides Azure translate endpoint URL.
-	BaseURL string `json:"base_url,omitempty" yaml:"base_url,omitempty"`
+	BaseURL string `json:"base_url,omitempty" yaml:"base_url,omitempty" jsonschema:"format=uri,example=https://api.cognitive.microsofttranslator.com/translate"`
 
 	// Key is Azure Translator subscription key.
 	//nolint:gosec // Runtime credential from external config.
-	Key string `json:"key,omitempty" yaml:"key,omitempty"`
+	Key string `json:"key,omitempty" yaml:"key,omitempty" jsonschema:"minLength=1"`
 
 	// Region is Azure Translator resource region.
-	Region string `json:"region,omitempty" yaml:"region,omitempty"`
+	Region string `json:"region,omitempty" yaml:"region,omitempty" jsonschema:"maxLength=64,example=westeurope"`
 
 	// Timeout is request timeout when HTTPClient is not provided.
-	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" jsonschema:"minimum=0,default=20000000000"`
 
 	// BatchMaxItems limits request batch size by item count.
-	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty"`
+	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty" jsonschema:"minimum=1,maximum=1000,default=1000"`
 
 	// BatchMaxChars limits request batch size by total chars.
-	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty"`
+	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty" jsonschema:"minimum=1,maximum=50000,default=50000"`
 }
 
 // Translator is official Azure Translator provider.

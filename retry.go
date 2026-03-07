@@ -24,17 +24,17 @@ const (
 
 // RetryOptions controls retry wrapper behavior.
 type RetryOptions struct {
-	// Attempts defines maximum total attempts including the first try.
-	Attempts int `json:"attempts,omitempty" yaml:"attempts,omitempty"`
+	// Attempts is total number of attempts for one request, including first try.
+	Attempts int `json:"attempts,omitempty" yaml:"attempts,omitempty" jsonschema:"minimum=1,maximum=32,default=3"`
 
 	// Delay defines delay before first retry.
-	Delay time.Duration `json:"delay,omitempty" yaml:"delay,omitempty"`
+	Delay time.Duration `json:"delay,omitempty" yaml:"delay,omitempty" jsonschema:"minimum=0,default=300000000"`
 
 	// MaxDelay defines maximum delay cap between retries.
-	MaxDelay time.Duration `json:"max_delay,omitempty" yaml:"max_delay,omitempty"`
+	MaxDelay time.Duration `json:"max_delay,omitempty" yaml:"max_delay,omitempty" jsonschema:"minimum=0"`
 
 	// Backoff multiplies delay after each failed attempt.
-	Backoff float64 `json:"backoff,omitempty" yaml:"backoff,omitempty"`
+	Backoff float64 `json:"backoff,omitempty" yaml:"backoff,omitempty" jsonschema:"minimum=1,maximum=10,default=2"`
 
 	// RetryPermanent allows retry for permanent provider errors.
 	RetryPermanent bool `json:"retry_permanent,omitempty" yaml:"retry_permanent,omitempty"`

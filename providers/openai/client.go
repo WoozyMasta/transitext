@@ -41,44 +41,44 @@ type Options struct {
 	HTTPClient *http.Client `json:"-" yaml:"-"`
 
 	// BaseURL is OpenAI-compatible API base URL.
-	BaseURL string `json:"base_url,omitempty" yaml:"base_url,omitempty"`
+	BaseURL string `json:"base_url,omitempty" yaml:"base_url,omitempty" jsonschema:"format=uri,example=https://api.openai.com/v1"`
 
 	// AuthToken is bearer token for API authentication.
 	//nolint:gosec // This is runtime config field, not embedded secret.
-	AuthToken string `json:"auth_token,omitempty" yaml:"auth_token,omitempty"`
+	AuthToken string `json:"auth_token,omitempty" yaml:"auth_token,omitempty" jsonschema:"minLength=1"`
 
 	// Model is model identifier.
-	Model string `json:"model,omitempty" yaml:"model,omitempty"`
+	Model string `json:"model,omitempty" yaml:"model,omitempty" jsonschema:"maxLength=128,default=gpt-4o-mini"`
 
 	// SystemPrompt overrides default system prompt.
-	SystemPrompt string `json:"system_prompt,omitempty" yaml:"system_prompt,omitempty"`
+	SystemPrompt string `json:"system_prompt,omitempty" yaml:"system_prompt,omitempty" jsonschema:"maxLength=8000"`
 
 	// InstructionPrefix is prepended to request instructions.
-	InstructionPrefix string `json:"instruction_prefix,omitempty" yaml:"instruction_prefix,omitempty"`
+	InstructionPrefix string `json:"instruction_prefix,omitempty" yaml:"instruction_prefix,omitempty" jsonschema:"maxLength=4000"`
 
 	// InstructionSuffix is appended to request instructions.
-	InstructionSuffix string `json:"instruction_suffix,omitempty" yaml:"instruction_suffix,omitempty"`
+	InstructionSuffix string `json:"instruction_suffix,omitempty" yaml:"instruction_suffix,omitempty" jsonschema:"maxLength=4000"`
 
 	// Temperature sets sampling temperature.
-	Temperature float64 `json:"temperature,omitempty" yaml:"temperature,omitempty"`
+	Temperature float64 `json:"temperature,omitempty" yaml:"temperature,omitempty" jsonschema:"minimum=0,maximum=2"`
 
 	// TopP sets nucleus sampling parameter.
-	TopP float64 `json:"top_p,omitempty" yaml:"top_p,omitempty"`
+	TopP float64 `json:"top_p,omitempty" yaml:"top_p,omitempty" jsonschema:"minimum=0,maximum=1"`
 
 	// MaxTokens sets response token cap when supported.
-	MaxTokens int `json:"max_tokens,omitempty" yaml:"max_tokens,omitempty"`
+	MaxTokens int `json:"max_tokens,omitempty" yaml:"max_tokens,omitempty" jsonschema:"minimum=1,maximum=200000"`
 
 	// StrictJSONArray requires strict JSON array response parsing.
 	StrictJSONArray bool `json:"strict_json_array,omitempty" yaml:"strict_json_array,omitempty"`
 
 	// BatchMaxItems limits request batch size by items.
-	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty"`
+	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty" jsonschema:"minimum=1,maximum=1000"`
 
 	// BatchMaxChars limits request batch size by chars.
-	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty"`
+	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty" jsonschema:"minimum=1,maximum=1000000"`
 
 	// Timeout is HTTP timeout when HTTPClient is not provided.
-	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" jsonschema:"minimum=0,default=60000000000"`
 }
 
 // Translator is OpenAI-compatible provider implementation.

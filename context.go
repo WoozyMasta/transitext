@@ -23,20 +23,20 @@ const (
 
 // ContextOptions controls experimental context-injection wrapper behavior.
 type ContextOptions struct {
-	// Context is default context applied to all items when non-empty.
-	Context string `json:"context,omitempty" yaml:"context,omitempty"`
+	// Context is default translation context injected for each item.
+	Context string `json:"context,omitempty" yaml:"context,omitempty" jsonschema:"maxLength=2000"`
 
 	// ContextByID overrides context for specific item IDs.
-	ContextByID map[string]string `json:"context_by_id,omitempty" yaml:"context_by_id,omitempty"`
+	ContextByID map[string]string `json:"context_by_id,omitempty" yaml:"context_by_id,omitempty" jsonschema:"maxProperties=2048"`
 
-	// ContextToken overrides marker before context payload.
-	ContextToken string `json:"context_token,omitempty" yaml:"context_token,omitempty"`
+	// ContextToken is marker inserted before context payload.
+	ContextToken string `json:"context_token,omitempty" yaml:"context_token,omitempty" jsonschema:"minLength=1,maxLength=64"`
 
-	// TextToken overrides marker before source text payload.
-	TextToken string `json:"text_token,omitempty" yaml:"text_token,omitempty"`
+	// TextToken is marker inserted before source text payload.
+	TextToken string `json:"text_token,omitempty" yaml:"text_token,omitempty" jsonschema:"minLength=1,maxLength=64"`
 
-	// EndToken overrides marker after source text payload.
-	EndToken string `json:"end_token,omitempty" yaml:"end_token,omitempty"`
+	// EndToken is marker appended after source text payload.
+	EndToken string `json:"end_token,omitempty" yaml:"end_token,omitempty" jsonschema:"minLength=1,maxLength=64"`
 }
 
 // ContextTranslator injects context into item text and strips marker envelope.

@@ -19,6 +19,15 @@ explicit errors, and easy runtime configuration.
 go get github.com/woozymasta/transitext
 ```
 
+## Configuration Reference
+
+If you use `transitext` from external config files, use these artifacts:
+
+* [CONFIG.md](CONFIG.md) for human-readable parameter reference.
+* [schema.json](schema.json) for JSON Schema validation and editor tooling.
+* [config package](config/types.go) (`github.com/woozymasta/transitext/config`)
+  for reusable typed config contracts in your application code.
+
 ## Providers
 
 `transitext` supports both production-oriented API providers and experimental

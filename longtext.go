@@ -33,7 +33,7 @@ type LongTextOptions struct {
 	ErrorOnOverflow bool `json:"error_on_overflow,omitempty" yaml:"error_on_overflow,omitempty"`
 
 	// MaxTextChars overrides provider single-item limit.
-	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty"`
+	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty" jsonschema:"minimum=1,maximum=1000000"`
 }
 
 // LongTextTranslator splits oversized items and merges translated parts back.

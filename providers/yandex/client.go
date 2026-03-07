@@ -35,27 +35,27 @@ type Options struct {
 	HTTPClient *http.Client `json:"-" yaml:"-"`
 
 	// BaseURL overrides Yandex translate endpoint URL.
-	BaseURL string `json:"base_url,omitempty" yaml:"base_url,omitempty"`
+	BaseURL string `json:"base_url,omitempty" yaml:"base_url,omitempty" jsonschema:"format=uri,example=https://translate.api.cloud.yandex.net/translate/v2/translate"`
 
 	// API key for Yandex Cloud Translate.
 	//nolint:gosec // Runtime credential from external config.
-	APIKey string `json:"api_key,omitempty" yaml:"api_key,omitempty"`
+	APIKey string `json:"api_key,omitempty" yaml:"api_key,omitempty" jsonschema:"minLength=1"`
 
 	// IAMToken can be used instead of APIKey.
 	//nolint:gosec // Runtime credential from external config.
-	IAMToken string `json:"iam_token,omitempty" yaml:"iam_token,omitempty"`
+	IAMToken string `json:"iam_token,omitempty" yaml:"iam_token,omitempty" jsonschema:"minLength=1"`
 
 	// FolderID is Yandex Cloud folder id for API key auth mode.
-	FolderID string `json:"folder_id,omitempty" yaml:"folder_id,omitempty"`
+	FolderID string `json:"folder_id,omitempty" yaml:"folder_id,omitempty" jsonschema:"maxLength=128"`
 
 	// Timeout is request timeout when HTTPClient is not provided.
-	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" jsonschema:"minimum=0,default=20000000000"`
 
 	// BatchMaxItems limits request batch size by item count.
-	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty"`
+	BatchMaxItems int `json:"batch_max_items,omitempty" yaml:"batch_max_items,omitempty" jsonschema:"minimum=1,maximum=1000"`
 
 	// BatchMaxChars limits request batch size by total chars.
-	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty"`
+	BatchMaxChars int `json:"batch_max_chars,omitempty" yaml:"batch_max_chars,omitempty" jsonschema:"minimum=1,maximum=10000,default=10000"`
 }
 
 // Translator is official Yandex Translate provider.

@@ -12,8 +12,8 @@ import (
 
 // PartialOptions controls partial-result wrapper behavior.
 type PartialOptions struct {
-	// ItemRetries is additional retry count for one item on non-stop errors.
-	ItemRetries int `json:"item_retries,omitempty" yaml:"item_retries,omitempty"`
+	// ItemRetries is extra retry count for one failed item.
+	ItemRetries int `json:"item_retries,omitempty" yaml:"item_retries,omitempty" jsonschema:"minimum=0,maximum=16"`
 
 	// ContinueOnTemporary keeps processing after temporary provider errors.
 	ContinueOnTemporary bool `json:"continue_on_temporary,omitempty" yaml:"continue_on_temporary,omitempty"`

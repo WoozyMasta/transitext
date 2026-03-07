@@ -64,22 +64,22 @@ type Options struct {
 	Request *transitext.HTTPRequestOptions `json:"request,omitempty" yaml:"request,omitempty"`
 
 	// HostURL overrides Bing host URL.
-	HostURL string `json:"host_url,omitempty" yaml:"host_url,omitempty"`
+	HostURL string `json:"host_url,omitempty" yaml:"host_url,omitempty" jsonschema:"format=uri,example=https://www.bing.com"`
 
 	// UserAgent overrides default request user agent.
-	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty"`
+	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty" jsonschema:"maxLength=512"`
 
 	// Timeout is request timeout when HTTPClient is not provided.
-	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" jsonschema:"minimum=0,default=20000000000"`
 
 	// MaxItems limits items per one transitext batch.
-	MaxItems int `json:"max_items,omitempty" yaml:"max_items,omitempty"`
+	MaxItems int `json:"max_items,omitempty" yaml:"max_items,omitempty" jsonschema:"minimum=1,maximum=100,default=10"`
 
 	// MaxChars limits total chars per one transitext batch.
-	MaxChars int `json:"max_chars,omitempty" yaml:"max_chars,omitempty"`
+	MaxChars int `json:"max_chars,omitempty" yaml:"max_chars,omitempty" jsonschema:"minimum=1,maximum=20000,default=1000"`
 
 	// MaxTextChars limits one input text length.
-	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty"`
+	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty" jsonschema:"minimum=1,maximum=3000,default=1000"`
 }
 
 // Translator is unofficial Bing translation provider.

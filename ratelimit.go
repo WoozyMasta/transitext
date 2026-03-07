@@ -12,8 +12,9 @@ import (
 
 // RateLimitOptions controls rate limit wrapper behavior.
 type RateLimitOptions struct {
-	// MinInterval is minimum delay between wrapped Translate calls.
-	MinInterval time.Duration `json:"min_interval,omitempty" yaml:"min_interval,omitempty"`
+	// MinInterval is minimal delay between outbound requests.
+	// Set `0` to disable throttling.
+	MinInterval time.Duration `json:"min_interval,omitempty" yaml:"min_interval,omitempty" jsonschema:"minimum=0"`
 }
 
 // RateLimitTranslator enforces minimum interval between Translate calls.

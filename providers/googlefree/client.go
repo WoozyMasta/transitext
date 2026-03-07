@@ -57,28 +57,28 @@ type Options struct {
 	Request *transitext.HTTPRequestOptions `json:"request,omitempty" yaml:"request,omitempty"`
 
 	// ClientValue overrides "client" query parameter.
-	ClientValue string `json:"client_value,omitempty" yaml:"client_value,omitempty"`
+	ClientValue string `json:"client_value,omitempty" yaml:"client_value,omitempty" jsonschema:"maxLength=64,default=gtx"`
 
 	// UserAgent overrides default request user agent.
-	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty"`
+	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty" jsonschema:"maxLength=512"`
 
 	// ServiceHosts contains hosts for /translate_a/single endpoint.
-	ServiceHosts []string `json:"service_hosts,omitempty" yaml:"service_hosts,omitempty"`
+	ServiceHosts []string `json:"service_hosts,omitempty" yaml:"service_hosts,omitempty" jsonschema:"minItems=1,maxItems=16,example=translate.googleapis.com"`
 
 	// Timeout is request timeout when HTTPClient is not provided.
-	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" jsonschema:"minimum=0,default=20000000000"`
 
 	// MaxItems limits items per one transitext batch.
-	MaxItems int `json:"max_items,omitempty" yaml:"max_items,omitempty"`
+	MaxItems int `json:"max_items,omitempty" yaml:"max_items,omitempty" jsonschema:"minimum=1,maximum=100,default=10"`
 
 	// MaxChars limits total chars per one transitext batch.
-	MaxChars int `json:"max_chars,omitempty" yaml:"max_chars,omitempty"`
+	MaxChars int `json:"max_chars,omitempty" yaml:"max_chars,omitempty" jsonschema:"minimum=1,maximum=30000,default=5000"`
 
 	// MaxTextChars limits one input text length.
-	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty"`
+	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty" jsonschema:"minimum=1,maximum=5000,default=5000"`
 
 	// Concurrency limits parallel per-item HTTP calls.
-	Concurrency int `json:"concurrency,omitempty" yaml:"concurrency,omitempty"`
+	Concurrency int `json:"concurrency,omitempty" yaml:"concurrency,omitempty" jsonschema:"minimum=1,maximum=64,default=2"`
 }
 
 // Translator is unofficial Google endpoint translator.

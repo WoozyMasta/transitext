@@ -13,6 +13,24 @@ and this project adheres to [Semantic Versioning][].
 ### Removed
 -->
 
+## [0.1.2][] - 2026-03-07
+
+### Added
+
+* Added schema-friendly config package
+  `github.com/woozymasta/transitext/config` with aggregated wrapper
+  and provider options for documentation and validation flows.
+
+### Changed
+
+* Added `jsonschema` constraints for core request/batch contracts, wrapper
+  options, and built-in provider options.
+* Updated public option field comments to be clearer for end-user configuration.
+* Fixed package documentation example to match current
+  `RetryOptions` and `RateLimitOptions` API.
+
+[0.1.2]: https://github.com/WoozyMasta/transitext/compare/v0.1.1...v0.1.2
+
 ## [0.1.1][] - 2026-03-06
 
 ### Added
@@ -21,7 +39,7 @@ and this project adheres to [Semantic Versioning][].
   user-facing language names/aliases can be resolved to provider-ready codes
   before translation.
 
-[0.1.1]: https://github.com/WoozyMasta/paa/compare/v0.1.0...v0.1.1
+[0.1.1]: https://github.com/WoozyMasta/transitext/compare/v0.1.0...v0.1.1
 
 ## [0.1.0][] - 2026-03-05
 

@@ -1,0 +1,968 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/woozymasta/transitext/config/config",
+  "$ref": "#/$defs/Config",
+  "$defs": {
+    "Config": {
+      "properties": {
+        "providers": {
+          "$ref": "#/$defs/Providers",
+          "description": "Providers contains per-provider transport and API options."
+        },
+        "wrappers": {
+          "$ref": "#/$defs/Wrappers",
+          "description": "Wrappers contains pipeline wrapper options applied around provider."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "providers",
+        "wrappers"
+      ],
+      "description": "Config is a full transitext configuration document."
+    },
+    "Providers": {
+      "properties": {
+        "microsoft": {
+          "$ref": "#/$defs/microsoft_Options",
+          "description": "Microsoft configures unofficial Microsoft Edge backend."
+        },
+        "google": {
+          "$ref": "#/$defs/google_Options",
+          "description": "Google configures official Google Translate API backend."
+        },
+        "yandex": {
+          "$ref": "#/$defs/yandex_Options",
+          "description": "Yandex configures official Yandex Cloud Translate backend."
+        },
+        "azure": {
+          "$ref": "#/$defs/azure_Options",
+          "description": "Azure configures official Azure Translator backend."
+        },
+        "libre": {
+          "$ref": "#/$defs/libre_Options",
+          "description": "Libre configures LibreTranslate backend."
+        },
+        "deepl": {
+          "$ref": "#/$defs/deepl_Options",
+          "description": "DeepL configures official DeepL API backend."
+        },
+        "bingfree": {
+          "$ref": "#/$defs/bingfree_Options",
+          "description": "BingFree configures unofficial Bing web backend."
+        },
+        "yandexfree": {
+          "$ref": "#/$defs/yandexfree_Options",
+          "description": "YandexFree configures unofficial Yandex web backend."
+        },
+        "deeplfree": {
+          "$ref": "#/$defs/deeplfree_Options",
+          "description": "DeepLFree configures unofficial DeepL web backend."
+        },
+        "googlefree": {
+          "$ref": "#/$defs/googlefree_Options",
+          "description": "GoogleFree configures unofficial Google web backend."
+        },
+        "openai": {
+          "$ref": "#/$defs/openai_Options",
+          "description": "OpenAI configures OpenAI-compatible chat translation backend."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "microsoft",
+        "google",
+        "yandex",
+        "azure",
+        "libre",
+        "deepl",
+        "bingfree",
+        "yandexfree",
+        "deeplfree",
+        "googlefree",
+        "openai"
+      ],
+      "description": "Providers groups built-in provider option blocks."
+    },
+    "Wrappers": {
+      "properties": {
+        "context": {
+          "$ref": "#/$defs/transitext_ContextOptions",
+          "description": "Context configures context marker injection mode."
+        },
+        "retry": {
+          "$ref": "#/$defs/transitext_RetryOptions",
+          "description": "Retry configures automatic retries for retryable errors."
+        },
+        "partial": {
+          "$ref": "#/$defs/transitext_PartialOptions",
+          "description": "Partial configures per-item fallback behavior on batch failures."
+        },
+        "long_text": {
+          "$ref": "#/$defs/transitext_LongTextOptions",
+          "description": "LongText configures auto-splitting for oversized text items."
+        },
+        "rate_limit": {
+          "$ref": "#/$defs/transitext_RateLimitOptions",
+          "description": "RateLimit configures minimum interval between outbound requests."
+        },
+        "cache": {
+          "$ref": "#/$defs/transitext_CacheOptions",
+          "description": "Cache configures in-memory response caching."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "context",
+        "retry",
+        "partial",
+        "long_text",
+        "rate_limit",
+        "cache"
+      ],
+      "description": "Wrappers groups wrapper options used by transitext.Wrap(...)."
+    },
+    "azure_Options": {
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "BaseURL overrides Azure translate endpoint URL.",
+          "examples": [
+            "https://api.cognitive.microsofttranslator.com/translate"
+          ]
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key is Azure Translator subscription key."
+        },
+        "region": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Region is Azure Translator resource region.",
+          "examples": [
+            "westeurope"
+          ]
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        },
+        "batch_max_items": {
+          "type": "integer",
+          "maximum": 1000,
+          "minimum": 1,
+          "description": "BatchMaxItems limits request batch size by item count.",
+          "default": 1000
+        },
+        "batch_max_chars": {
+          "type": "integer",
+          "maximum": 50000,
+          "minimum": 1,
+          "description": "BatchMaxChars limits request batch size by total chars.",
+          "default": 50000
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls Azure provider behavior."
+    },
+    "bingfree_Options": {
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/transitext_HTTPRequestOptions",
+          "description": "Request controls low-level HTTP header/cookie/user-agent shaping."
+        },
+        "host_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "HostURL overrides Bing host URL.",
+          "examples": [
+            "https://www.bing.com"
+          ]
+        },
+        "user_agent": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "UserAgent overrides default request user agent."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        },
+        "max_items": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "MaxItems limits items per one transitext batch.",
+          "default": 10
+        },
+        "max_chars": {
+          "type": "integer",
+          "maximum": 20000,
+          "minimum": 1,
+          "description": "MaxChars limits total chars per one transitext batch.",
+          "default": 1000
+        },
+        "max_text_chars": {
+          "type": "integer",
+          "maximum": 3000,
+          "minimum": 1,
+          "description": "MaxTextChars limits one input text length.",
+          "default": 1000
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls bingfree provider behavior."
+    },
+    "deepl_Options": {
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL overrides DeepL endpoint URL.",
+          "examples": [
+            "https://api.deepl.com/v2/translate"
+          ]
+        },
+        "auth_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Auth key for DeepL API."
+        },
+        "source_lang": {
+          "type": "string",
+          "maxLength": 16,
+          "minLength": 2,
+          "description": "SourceLang sets default source language when request.SourceLang is empty.",
+          "examples": [
+            "EN"
+          ]
+        },
+        "formality": {
+          "type": "string",
+          "enum": [
+            "default",
+            "more",
+            "less",
+            "prefer_more",
+            "prefer_less"
+          ],
+          "description": "Formality controls formality mode where supported."
+        },
+        "split_sentences": {
+          "type": "string",
+          "enum": [
+            "0",
+            "1",
+            "nonewlines"
+          ],
+          "description": "SplitSentences controls DeepL sentence splitting behavior."
+        },
+        "batch_max_items": {
+          "type": "integer",
+          "maximum": 50,
+          "minimum": 1,
+          "description": "BatchMaxItems limits request batch size by item count.",
+          "default": 50
+        },
+        "batch_max_chars": {
+          "type": "integer",
+          "maximum": 131072,
+          "minimum": 1,
+          "description": "BatchMaxChars limits request batch size by total chars.",
+          "default": 50000
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        },
+        "use_free_api": {
+          "type": "boolean",
+          "description": "UseFreeAPI selects free endpoint when URL is empty."
+        },
+        "preserve_formatting": {
+          "type": "boolean",
+          "description": "PreserveFormatting preserves source formatting when true."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls DeepL provider behavior."
+    },
+    "deeplfree_Options": {
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL overrides DeepL web endpoint URL.",
+          "examples": [
+            "https://www2.deepl.com/jsonrpc"
+          ]
+        },
+        "user_agent": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "UserAgent overrides default request user agent."
+        },
+        "request": {
+          "$ref": "#/$defs/transitext_HTTPRequestOptions",
+          "description": "Request controls low-level HTTP header/cookie/user-agent shaping."
+        },
+        "accept_language": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "AcceptLanguage overrides Accept-Language header value.",
+          "default": "en-US"
+        },
+        "dl_session": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "DLSession optionally sends dl_session cookie for authenticated web mode."
+        },
+        "split_mode": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "SplitMode controls DeepL splitting mode (for example \"newlines\").",
+          "default": "newlines"
+        },
+        "request_alternatives": {
+          "type": "integer",
+          "maximum": 10,
+          "minimum": 1,
+          "description": "RequestAlternatives sets requestAlternatives for each text.",
+          "default": 3
+        },
+        "max_items": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "MaxItems limits items per one transitext batch.",
+          "default": 20
+        },
+        "max_chars": {
+          "type": "integer",
+          "maximum": 50000,
+          "minimum": 1,
+          "description": "MaxChars limits total chars per one transitext batch.",
+          "default": 5000
+        },
+        "max_text_chars": {
+          "type": "integer",
+          "maximum": 5000,
+          "minimum": 1,
+          "description": "MaxTextChars limits one input text length.",
+          "default": 5000
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls deeplfree provider behavior."
+    },
+    "google_Options": {
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "BaseURL overrides official Google endpoint URL.",
+          "examples": [
+            "https://translation.googleapis.com/language/translate/v2"
+          ]
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "API key for Google Translate API."
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "text",
+            "html"
+          ],
+          "description": "Format controls source text format: \"text\" or \"html\".",
+          "default": "text"
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Model selects Google translation model when supported."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        },
+        "batch_max_items": {
+          "type": "integer",
+          "maximum": 1000,
+          "minimum": 1,
+          "description": "BatchMaxItems limits request batch size by item count."
+        },
+        "batch_max_chars": {
+          "type": "integer",
+          "maximum": 30000,
+          "minimum": 1,
+          "description": "BatchMaxChars limits request batch size by total chars.",
+          "default": 30000
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls Google provider behavior."
+    },
+    "googlefree_Options": {
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/transitext_HTTPRequestOptions",
+          "description": "Request controls low-level HTTP header/cookie/user-agent shaping."
+        },
+        "client_value": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "ClientValue overrides \"client\" query parameter.",
+          "default": "gtx"
+        },
+        "user_agent": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "UserAgent overrides default request user agent."
+        },
+        "service_hosts": {
+          "items": {
+            "type": "string",
+            "examples": [
+              "translate.googleapis.com"
+            ]
+          },
+          "type": "array",
+          "maxItems": 16,
+          "minItems": 1,
+          "description": "ServiceHosts contains hosts for /translate_a/single endpoint."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        },
+        "max_items": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "MaxItems limits items per one transitext batch.",
+          "default": 10
+        },
+        "max_chars": {
+          "type": "integer",
+          "maximum": 30000,
+          "minimum": 1,
+          "description": "MaxChars limits total chars per one transitext batch.",
+          "default": 5000
+        },
+        "max_text_chars": {
+          "type": "integer",
+          "maximum": 5000,
+          "minimum": 1,
+          "description": "MaxTextChars limits one input text length.",
+          "default": 5000
+        },
+        "concurrency": {
+          "type": "integer",
+          "maximum": 64,
+          "minimum": 1,
+          "description": "Concurrency limits parallel per-item HTTP calls.",
+          "default": 2
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls googlefree translator behavior."
+    },
+    "libre_Options": {
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "BaseURL overrides LibreTranslate endpoint URL.",
+          "examples": [
+            "https://libretranslate.com/translate"
+          ]
+        },
+        "api_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "API key for LibreTranslate instance (optional for some deployments)."
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "text",
+            "html"
+          ],
+          "description": "Format controls source text format: \"text\" or \"html\".",
+          "default": "text"
+        },
+        "batch_max_items": {
+          "type": "integer",
+          "maximum": 1000,
+          "minimum": 1,
+          "description": "BatchMaxItems limits request batch size by item count."
+        },
+        "batch_max_chars": {
+          "type": "integer",
+          "maximum": 1000000,
+          "minimum": 1,
+          "description": "BatchMaxChars limits request batch size by total chars."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls LibreTranslate provider behavior."
+    },
+    "microsoft_Options": {
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/transitext_HTTPRequestOptions",
+          "description": "Request controls low-level HTTP header/cookie/user-agent shaping."
+        },
+        "auth_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "AuthURL overrides auth endpoint URL.",
+          "examples": [
+            "https://edge.microsoft.com/translate/auth"
+          ]
+        },
+        "translate_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "TranslateURL overrides translate endpoint URL.",
+          "examples": [
+            "https://api-edge.cognitive.microsofttranslator.com/translate"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "edge_free",
+            "custom_headers"
+          ],
+          "description": "Mode selects auth mode: \"edge_free\" or \"custom_headers\".",
+          "default": "edge_free"
+        },
+        "authentication_headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "AuthenticationHeaders are applied directly in custom_headers mode."
+        },
+        "translate_options": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "TranslateOptions adds optional query params to translate endpoint."
+        },
+        "user_agent": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "UserAgent overrides default request user agent."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        },
+        "max_items": {
+          "type": "integer",
+          "maximum": 1000,
+          "minimum": 1,
+          "description": "MaxItems limits items per one provider HTTP request.",
+          "default": 20
+        },
+        "max_chars": {
+          "type": "integer",
+          "maximum": 50000,
+          "minimum": 1,
+          "description": "MaxChars limits total chars per one provider HTTP request.",
+          "default": 4000
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls microsoft translator behavior."
+    },
+    "openai_Options": {
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "BaseURL is OpenAI-compatible API base URL.",
+          "examples": [
+            "https://api.openai.com/v1"
+          ]
+        },
+        "auth_token": {
+          "type": "string",
+          "minLength": 1,
+          "description": "AuthToken is bearer token for API authentication."
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Model is model identifier.",
+          "default": "gpt-4o-mini"
+        },
+        "system_prompt": {
+          "type": "string",
+          "maxLength": 8000,
+          "description": "SystemPrompt overrides default system prompt."
+        },
+        "instruction_prefix": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "InstructionPrefix is prepended to request instructions."
+        },
+        "instruction_suffix": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "InstructionSuffix is appended to request instructions."
+        },
+        "temperature": {
+          "type": "number",
+          "maximum": 2,
+          "minimum": 0,
+          "description": "Temperature sets sampling temperature."
+        },
+        "top_p": {
+          "type": "number",
+          "maximum": 1,
+          "minimum": 0,
+          "description": "TopP sets nucleus sampling parameter."
+        },
+        "max_tokens": {
+          "type": "integer",
+          "maximum": 200000,
+          "minimum": 1,
+          "description": "MaxTokens sets response token cap when supported."
+        },
+        "strict_json_array": {
+          "type": "boolean",
+          "description": "StrictJSONArray requires strict JSON array response parsing."
+        },
+        "batch_max_items": {
+          "type": "integer",
+          "maximum": 1000,
+          "minimum": 1,
+          "description": "BatchMaxItems limits request batch size by items."
+        },
+        "batch_max_chars": {
+          "type": "integer",
+          "maximum": 1000000,
+          "minimum": 1,
+          "description": "BatchMaxChars limits request batch size by chars."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is HTTP timeout when HTTPClient is not provided.",
+          "default": 60000000000
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls OpenAI-compatible provider behavior."
+    },
+    "transitext_CacheOptions": {
+      "properties": {
+        "include_hints": {
+          "type": "boolean",
+          "description": "IncludeHints adds `hints` fields into cache key.\nEnable this when hints can change translation output."
+        },
+        "include_metadata": {
+          "type": "boolean",
+          "description": "IncludeMetadata adds request metadata into cache key.\nEnable this only if metadata affects provider output."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "CacheOptions controls cache wrapper behavior."
+    },
+    "transitext_ContextOptions": {
+      "properties": {
+        "context": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Context is default translation context injected for each item."
+        },
+        "context_by_id": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "ContextByID overrides context for specific item IDs."
+        },
+        "context_token": {
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 1,
+          "description": "ContextToken is marker inserted before context payload."
+        },
+        "text_token": {
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 1,
+          "description": "TextToken is marker inserted before source text payload."
+        },
+        "end_token": {
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 1,
+          "description": "EndToken is marker appended after source text payload."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "ContextOptions controls experimental context-injection wrapper behavior."
+    },
+    "transitext_HTTPRequestOptions": {
+      "properties": {
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Headers sets default headers applied when missing in request."
+        },
+        "cookies": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Cookies sets default cookies applied when request cookie header is empty."
+        },
+        "user_agent": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "UserAgent sets default User-Agent when request does not set it explicitly."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "HTTPRequestOptions controls generic outbound request shaping for providers."
+    },
+    "transitext_LongTextOptions": {
+      "properties": {
+        "error_on_overflow": {
+          "type": "boolean",
+          "description": "ErrorOnOverflow fails when item exceeds MaxTextChars.\nBy default long items are split and merged automatically."
+        },
+        "max_text_chars": {
+          "type": "integer",
+          "maximum": 1000000,
+          "minimum": 1,
+          "description": "MaxTextChars overrides provider single-item limit."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "LongTextOptions controls single-item overflow handling."
+    },
+    "transitext_PartialOptions": {
+      "properties": {
+        "item_retries": {
+          "type": "integer",
+          "maximum": 16,
+          "minimum": 0,
+          "description": "ItemRetries is extra retry count for one failed item."
+        },
+        "continue_on_temporary": {
+          "type": "boolean",
+          "description": "ContinueOnTemporary keeps processing after temporary provider errors."
+        },
+        "continue_on_context": {
+          "type": "boolean",
+          "description": "ContinueOnContext keeps processing after context cancellation/deadline."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "PartialOptions controls partial-result wrapper behavior."
+    },
+    "transitext_RateLimitOptions": {
+      "properties": {
+        "min_interval": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "MinInterval is minimal delay between outbound requests.\nSet `0` to disable throttling."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "RateLimitOptions controls rate limit wrapper behavior."
+    },
+    "transitext_RetryOptions": {
+      "properties": {
+        "attempts": {
+          "type": "integer",
+          "maximum": 32,
+          "minimum": 1,
+          "description": "Attempts is total number of attempts for one request, including first try.",
+          "default": 3
+        },
+        "delay": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Delay defines delay before first retry.",
+          "default": 300000000
+        },
+        "max_delay": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "MaxDelay defines maximum delay cap between retries."
+        },
+        "backoff": {
+          "type": "number",
+          "maximum": 10,
+          "minimum": 1,
+          "description": "Backoff multiplies delay after each failed attempt.",
+          "default": 2
+        },
+        "retry_permanent": {
+          "type": "boolean",
+          "description": "RetryPermanent allows retry for permanent provider errors."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "RetryOptions controls retry wrapper behavior."
+    },
+    "yandex_Options": {
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "BaseURL overrides Yandex translate endpoint URL.",
+          "examples": [
+            "https://translate.api.cloud.yandex.net/translate/v2/translate"
+          ]
+        },
+        "api_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "API key for Yandex Cloud Translate."
+        },
+        "iam_token": {
+          "type": "string",
+          "minLength": 1,
+          "description": "IAMToken can be used instead of APIKey."
+        },
+        "folder_id": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "FolderID is Yandex Cloud folder id for API key auth mode."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        },
+        "batch_max_items": {
+          "type": "integer",
+          "maximum": 1000,
+          "minimum": 1,
+          "description": "BatchMaxItems limits request batch size by item count."
+        },
+        "batch_max_chars": {
+          "type": "integer",
+          "maximum": 10000,
+          "minimum": 1,
+          "description": "BatchMaxChars limits request batch size by total chars.",
+          "default": 10000
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls Yandex provider behavior."
+    },
+    "yandexfree_Options": {
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/transitext_HTTPRequestOptions",
+          "description": "Request controls low-level HTTP header/cookie/user-agent shaping."
+        },
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "BaseURL overrides Yandex free API base URL.",
+          "examples": [
+            "https://translate.yandex.net/api/v1/tr.json"
+          ]
+        },
+        "user_agent": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "UserAgent overrides default user-agent."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout is request timeout when HTTPClient is not provided.",
+          "default": 20000000000
+        },
+        "max_items": {
+          "type": "integer",
+          "maximum": 100,
+          "minimum": 1,
+          "description": "MaxItems limits items per one transitext batch.",
+          "default": 10
+        },
+        "max_chars": {
+          "type": "integer",
+          "maximum": 10000,
+          "minimum": 1,
+          "description": "MaxChars limits total chars per one transitext batch.",
+          "default": 10000
+        },
+        "max_text_chars": {
+          "type": "integer",
+          "maximum": 10000,
+          "minimum": 1,
+          "description": "MaxTextChars limits one input text length.",
+          "default": 10000
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Options controls yandexfree provider behavior."
+    }
+  }
+}

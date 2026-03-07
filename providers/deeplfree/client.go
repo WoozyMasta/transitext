@@ -54,37 +54,37 @@ type Options struct {
 	HTTPClient *http.Client `json:"-" yaml:"-"`
 
 	// URL overrides DeepL web endpoint URL.
-	URL string `json:"url,omitempty" yaml:"url,omitempty"`
+	URL string `json:"url,omitempty" yaml:"url,omitempty" jsonschema:"format=uri,example=https://www2.deepl.com/jsonrpc"`
 
 	// UserAgent overrides default request user agent.
-	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty"`
+	UserAgent string `json:"user_agent,omitempty" yaml:"user_agent,omitempty" jsonschema:"maxLength=512"`
 
 	// Request controls low-level HTTP header/cookie/user-agent shaping.
 	Request *transitext.HTTPRequestOptions `json:"request,omitempty" yaml:"request,omitempty"`
 
 	// AcceptLanguage overrides Accept-Language header value.
-	AcceptLanguage string `json:"accept_language,omitempty" yaml:"accept_language,omitempty"`
+	AcceptLanguage string `json:"accept_language,omitempty" yaml:"accept_language,omitempty" jsonschema:"maxLength=128,default=en-US,en;q=0.9"`
 
 	// DLSession optionally sends dl_session cookie for authenticated web mode.
-	DLSession string `json:"dl_session,omitempty" yaml:"dl_session,omitempty"`
+	DLSession string `json:"dl_session,omitempty" yaml:"dl_session,omitempty" jsonschema:"maxLength=512"`
 
 	// SplitMode controls DeepL splitting mode (for example "newlines").
-	SplitMode string `json:"split_mode,omitempty" yaml:"split_mode,omitempty"`
+	SplitMode string `json:"split_mode,omitempty" yaml:"split_mode,omitempty" jsonschema:"maxLength=32,default=newlines"`
 
 	// RequestAlternatives sets requestAlternatives for each text.
-	RequestAlternatives int `json:"request_alternatives,omitempty" yaml:"request_alternatives,omitempty"`
+	RequestAlternatives int `json:"request_alternatives,omitempty" yaml:"request_alternatives,omitempty" jsonschema:"minimum=1,maximum=10,default=3"`
 
 	// MaxItems limits items per one transitext batch.
-	MaxItems int `json:"max_items,omitempty" yaml:"max_items,omitempty"`
+	MaxItems int `json:"max_items,omitempty" yaml:"max_items,omitempty" jsonschema:"minimum=1,maximum=100,default=20"`
 
 	// MaxChars limits total chars per one transitext batch.
-	MaxChars int `json:"max_chars,omitempty" yaml:"max_chars,omitempty"`
+	MaxChars int `json:"max_chars,omitempty" yaml:"max_chars,omitempty" jsonschema:"minimum=1,maximum=50000,default=5000"`
 
 	// MaxTextChars limits one input text length.
-	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty"`
+	MaxTextChars int `json:"max_text_chars,omitempty" yaml:"max_text_chars,omitempty" jsonschema:"minimum=1,maximum=5000,default=5000"`
 
 	// Timeout is request timeout when HTTPClient is not provided.
-	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" jsonschema:"minimum=0,default=20000000000"`
 }
 
 // Translator is unofficial DeepL web translator.
